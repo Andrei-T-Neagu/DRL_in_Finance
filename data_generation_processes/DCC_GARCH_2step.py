@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 from scipy.optimize import Bounds
 import yfinance as yf
+import GARCH
 
 class DCC_GARCH():
     """
@@ -23,16 +24,19 @@ class DCC_GARCH():
         R_t:        n x n, conditional correlation matrix of a_t at time t.
         z_t:        n x 1 vector of iid errors such that E[z_t] = 0 and E[z_t z_t^T] = I.
     """
-    def __init__(self, data, type="vanilla"):
+    def __init__(self, stocks, start="2000-01-01", end="2024-08-20", type="vanilla"):
         """
             Args:
             data: (N,T) numpy array of T timesteps of N asset log returns
         """
+        market_data = yf.download(stocks, start=start, end=end, interval="1d")
+        log_returns = np.log(market_data['Close'] / market_data['Close'].shift(1)).dropna()
+        self.data = log_returns.to_numpy().T                                        #(N, T) Dataset of log returns
+        print("Number of time steps: ", self.data.shape[1])
         self.type = type
-        self.N = data.shape[0]                                                      # Number of assets
-        self.T = data.shape[1]                                                      # NUmber of time steps
-        self.data = data                                                            #(N, T) Dataset of log returns
-        self.r_data = data                                                          #(N, T) Log returns of the data
+        self.N = self.data.shape[0]                                                 # Number of assets
+        self.T = self.data.shape[1]                                                 # Number of time steps                                                                                    
+        self.r_data = self.data                                                     #(N, T) Log returns of the data
         self.mu = np.mean(self.r_data, axis=1, keepdims=True)                       #(N, 1) Expected value of the log returns of the data
         self.a_data = self.r_data - np.mean(self.r_data, axis=1, keepdims=True)     #(N, T) Mean corrected returns of the dataset
         self.H = np.cov(self.a_data)                                                #(N, N) conditional variance matrix 
@@ -50,22 +54,6 @@ class DCC_GARCH():
         else:
             self.params = np.concatenate((np.var(self.a_data, axis=1), np.zeros(self.N*2)+0.2, np.zeros(2)+0.2))   # parameters [N*alpha0, N*alpha, N*beta, a, b]
 
-        # self.params = [8.26653925e-05, 4.26930333e-05, 2.15645253e-05, 3.47352036e-05, 2.17463059e-05, 2.77256555e-05, 
-        #                4.88055909e-01, 4.53632078e-01, 4.55335336e-01, 4.44909987e-01, 4.50541641e-01, 4.60263855e-01,
-        #                5.10702325e-01, 4.91397344e-01, 5.00709648e-01, 4.96429990e-01, 5.08129108e-01, 5.19125001e-01, 
-                    #    2.01240559e-01, 3.96732870e-01]                              # GARCH "AAPL ^GDAXI ^IXIC ^GSPC ^DJI MCD"
-        # self.params = [7.69190563e-06, 3.40617337e-06, 8.43286285e-07, 2.34670148e-06, 8.82266125e-07, 1.35735374e-06, 
-        #                5.34717567e-02, 9.90676117e-02, 1.71654882e-02, 9.09021040e-02, 2.00707347e-02, 3.07189856e-02,
-        #                9.08018007e-01, 8.96126936e-01, 9.47662499e-01, 8.96374022e-01, 9.47693815e-01, 9.42938402e-01,
-        #                6.27230466e-02, 2.92499894e-03, 5.06681487e-02, 1.77359878e-02, 4.40253553e-02, 3.28146310e-02, 
-        #                1.93617031e-02, 9.76175652e-01]                                # GJR-GARCH "AAPL ^GDAXI ^IXIC ^GSPC ^DJI MCD"
-        # self.params = [1.19523637e-05, 2.11605229e-06, 
-        #                1.03456625e-01, 1.04024146e-01, 
-        #                8.79042244e-01, 8.79606348e-01, 
-        #                2.33099997e-02, 9.72480707e-01]                              # GARCH "AAPL ^GSPC"                               
-        # self.params = [1.22778074e-05, 1.78956576e-06, 6.09289961e-02, 4.69337514e-03,
-        #                8.76762304e-01, 9.10380382e-01, 9.20651668e-02, 1.33300686e-01, 
-        #                2.69344690e-02, 9.67347998e-01]                                # GJR-GARCH "AAPL ^GSPC"
         self.nll_losses = []                                                          # negative log likelihood array used to store training losses
         
         def constraint_ab(x):
@@ -176,14 +164,13 @@ class DCC_GARCH():
         log_likelihood = 0
         self.D = np.diag(np.std(self.a_data, axis=1))
         self.R = np.corrcoef(self.a_data)
-        # Id = np.identity(self.N)
         self.Q = self.Q_bar
         for t in range(self.T):
             self.a_return = self.a_data[:, t:t+1]
             current_log_likelihood = np.log(np.linalg.det(self.R)) + self.a_return.T@np.linalg.inv(self.D)@np.linalg.inv(self.R)@np.linalg.inv(self.D)@self.a_return
             log_likelihood += current_log_likelihood
             self.e = np.linalg.inv(self.D)@self.a_return
-            self.D_t(params=params, t=t, train=train)
+            self.D_t(params=self.params, t=t, train=train)
             self.R_t(params=params, t=t, train=train)
         nll = log_likelihood.flatten()[0]/2.0
         # print("nll: ", nll)
@@ -201,11 +188,30 @@ class DCC_GARCH():
         
         dcc_params = self.params[-2:]
         dcc_results = minimize(fun=self.dcc_neg_log_likelihood, x0=dcc_params, method="trust-constr",
-                           options={'verbose': 3, 'maxiter': 2000, 'xtol': 1e-4}, constraints=self.dcc_constraints, bounds=self.dcc_bounds)
+                           options={'verbose': 3, 'maxiter': 2000, 'xtol': 1e-8}, constraints=self.dcc_constraints, bounds=self.dcc_bounds)
         self.params[-2:] = dcc_results.x
         print(self.params)
         return self.params
 
+    def train_R(self):
+        parameters = []
+
+        for i in range(len(list(stocks.split(" ")))):
+            log_returns_i = self.data[i]
+            garch_model = GARCH.GARCH(dcc=True, data=log_returns_i, type=self.type)
+            params_i = garch_model.train()
+            parameters.append(params_i)
+
+        parameters = np.array(parameters)
+        parameters = np.concatenate((parameters.T.flatten(), np.zeros(2)+0.2))
+
+        self.params = parameters
+        dcc_params = self.params[-2:]
+        dcc_results = minimize(fun=self.dcc_neg_log_likelihood, x0=dcc_params, method="trust-constr",
+                           options={'verbose': 3, 'maxiter': 2000, 'xtol': 1e-8}, constraints=self.dcc_constraints, bounds=self.dcc_bounds)
+        self.params[-2:] = dcc_results.x
+        return self.params
+    
     def generate(self, S_0, num_points):
         """Loop used to generate paths using the estimated parameters"""
         prices = np.ones((self.N, num_points)) * S_0                                # (N, num_points) Paths of length num_points of the N assets
@@ -221,32 +227,36 @@ class DCC_GARCH():
         return prices
     
 """
-^GDAXI: DAX, 
-AAPL: APPLE,
+^GDAXI: DAX (Germany)
 ^IXIC: NASDAQ
 ^GSPC: S AND P 500
+^DJI: Dow Jones Industrial Average
+^RUT: Russell 2000
+^N225: Nikkei 225 (Japan)
+^HSI: Hang Seng Index (Hong Kong)
+^NYA: NYSE Composite
+^FCHI: CAC 40 (France)
+MCD: McDonald's
+AAPL: Apple
 """
-# stocks = "AAPL ^GDAXI ^IXIC ^GSPC ^DJI MCD"
-stocks = "AAPL ^GSPC"
 
-data = yf.download(stocks, start="2000-09-10", end="2024-08-20", interval="1d")
-log_returns = np.log(data['Close'] / data['Close'].shift(1)).dropna()
-log_returns_np = log_returns.to_numpy().T
+stocks = "AAPL ^GDAXI ^IXIC ^GSPC ^DJI ^RUT ^N225 ^HSI ^NYA ^FCHI"
+garch_type = "gjr"
 
-model = DCC_GARCH(log_returns_np, type="gjr")
+dcc_garch_model = DCC_GARCH(stocks=stocks, type=garch_type)
 
-params = model.train()
-# print(params)
+params = dcc_garch_model.train_R()
+print(params)
 
 plt.figure(figsize=(12,6))
-plt.plot(model.nll_losses)
-plt.xlabel("Iterations")
+plt.plot(dcc_garch_model.nll_losses)
+plt.xlabel("Function Evaluations")
 plt.ylabel("Negative Log Likelihood")
 plt.savefig("dcc_nll_losses.png")
 plt.close()
 
 plt.figure(figsize=(12,6))
-x = model.generate(100, 252*5)
+x = dcc_garch_model.generate(S_0=100, num_points=252*5)
 plt.plot(x.T)
 plt.xlabel("Timesteps")
 plt.ylabel("Prices")

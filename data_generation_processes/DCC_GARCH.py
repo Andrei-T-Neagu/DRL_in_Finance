@@ -23,16 +23,18 @@ class DCC_GARCH():
         R_t:        n x n, conditional correlation matrix of a_t at time t.
         z_t:        n x 1 vector of iid errors such that E[z_t] = 0 and E[z_t z_t^T] = I.
     """
-    def __init__(self, data, type="vanilla"):
+    def __init__(self, stocks, start="2000-01-01", end="2024-08-20", type="vanilla"):
         """
             Args:
             data: (N,T) numpy array of T timesteps of N asset log returns
         """
+        market_data = yf.download(stocks, start=start, end=end, interval="1d")
+        log_returns = np.log(market_data['Close'] / market_data['Close'].shift(1)).dropna()
+        self.data = log_returns.to_numpy().T                                        #(N, T) Dataset of log returns
         self.type = type
-        self.N = data.shape[0]                                                      # Number of assets
-        self.T = data.shape[1]                                                      # NUmber of time steps
-        self.data = data                                                            #(N, T) Dataset of log returns
-        self.r_data = data                                                          #(N, T) Log returns of the data
+        self.N = self.data.shape[0]                                                      # Number of assets
+        self.T = self.data.shape[1]                                                      # NUmber of time steps
+        self.r_data = self.data                                                          #(N, T) Log returns of the data
         self.mu = np.mean(self.r_data, axis=1, keepdims=True)                       #(N, 1) Expected value of the log returns of the data
         self.a_data = self.r_data - np.mean(self.r_data, axis=1, keepdims=True)     #(N, T) Mean corrected returns of the dataset
         self.H = np.cov(self.a_data)                                                #(N, N) conditional variance matrix 
@@ -192,21 +194,17 @@ AAPL: APPLE,
 stocks = "AAPL ^GDAXI ^IXIC ^GSPC ^DJI MCD"
 # stocks = "AAPL ^GSPC"
 
-data = yf.download(stocks, start="2000-09-10", end="2024-08-20", interval="1d")
-log_returns = np.log(data['Close'] / data['Close'].shift(1)).dropna()
-log_returns_np = log_returns.to_numpy().T
+model = DCC_GARCH(stocks=stocks, type="gjr")
 
-model = DCC_GARCH(log_returns_np, type="gjr")
+# params = model.train()
+# print(params)
 
-params = model.train()
-print(params)
-
-plt.figure(figsize=(12,6))
-plt.plot(model.nll_losses)
-plt.xlabel("Iterations")
-plt.ylabel("Negative Log Likelihood")
-plt.savefig("dcc_nll_losses.png")
-plt.close()
+# plt.figure(figsize=(12,6))
+# plt.plot(model.nll_losses)
+# plt.xlabel("Function Evaluations")
+# plt.ylabel("Negative Log Likelihood")
+# plt.savefig("dcc_nll_losses.png")
+# plt.close()
 
 plt.figure(figsize=(12,6))
 x = model.generate(100, 252*5)
