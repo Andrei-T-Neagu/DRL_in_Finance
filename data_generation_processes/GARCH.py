@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import scipy
 from scipy.optimize import minimize
 from scipy.optimize import Bounds
-print(scipy.__version__)
+import pickle
 import yfinance as yf
 
 class GARCH():
@@ -20,7 +20,7 @@ class GARCH():
         h_t:        conditional variance of a_t at time t.
         z_t:        iid errors such that E[z_t] = 0 and E[z_t z_t] = 1.
     """
-    def __init__(self, dcc=False, data=None, stocks=None, start="2000-01-01", end="2024-08-20", type = "vanilla"):
+    def __init__(self, dcc=False, data=None, stock=None, start="2000-01-01", end="2024-08-20", type = "vanilla"):
         """
             Args:
             data: (N,T) numpy array of T timesteps asset log returns
@@ -29,7 +29,7 @@ class GARCH():
         if dcc:
             self.data = data
         else:
-            market_data = yf.download(stocks, start=start, end=end, interval="1d")
+            market_data = yf.download(stock, start=start, end=end, interval="1d")
             log_returns = np.log(market_data['Close'] / market_data['Close'].shift(1)).dropna()
             self.data = log_returns.to_numpy().T
         self.type = type
@@ -91,7 +91,7 @@ class GARCH():
 
         return nll
     
-    def train(self):
+    def train(self, save_params=False):
         """Training loop"""
         params = self.params
         results = minimize(fun=self.neg_log_likelihood, x0=params, method="trust-constr",
@@ -104,10 +104,18 @@ class GARCH():
             print("GJR-GARCH estimated unconditional variance: ", self.params[0]/(1-self.params[1]-self.params[2]-self.params[3]/2))
         print("Market data unconditional variance: ", np.var(self.a_data))
         
+        if save_params:
+            with open('garch_parameters.pickle', 'wb') as parameter_file:
+                pickle.dump(self.params, parameter_file)
+        
         return results.x
 
-    def generate(self, S_0, num_points):
+    def generate(self, S_0, num_points, load_params=False):
         """Loop used to generate paths using the estimated parameters"""
+        if load_params:
+            with open('garch_parameters.pickle', 'rb') as parameter_file:
+                self.params = pickle.load(parameter_file)
+        
         prices = np.ones(num_points) * S_0
         self.h = np.var(self.a_data)
         for t in range(num_points):
@@ -115,18 +123,17 @@ class GARCH():
             r_t = self.mu + self.a_return
             prices[t+1:t+2] = prices[t:t+1]*np.exp(r_t)
             self.h_t(params=self.params)
+        
         return prices
 
-# # Process dataset
-# stocks = "AAPL"
-# data = yf.download(stocks, start="2000-09-10", end="2024-08-20", interval="1d")
-# # data = yf.download(stocks, start="1986-12-31", end="2010-04-01", interval="1d")
-# log_returns = np.log(data['Close'] / data['Close'].shift(1)).dropna()
-# log_returns_np = log_returns.to_numpy().T
 
-# model = GARCH(log_returns_np, type="gjr")
 
-# params = model.train()
+stock = "AAPL"
+
+model = GARCH(stock=stock, type="gjr")
+
+# Training
+# params = model.train(save_params=True)
 # print("parameters: ", params)
 
 # plt.figure(figsize=(12,6))
@@ -136,11 +143,13 @@ class GARCH():
 # plt.savefig("garch_nll_losses.png")
 # plt.close()
 
-# x = model.generate(100, 252*5)
-
-# plt.figure(figsize=(12,6))
-# plt.plot(x.T)
-# plt.xlabel("Timesteps")
-# plt.ylabel("Prices")
-# plt.savefig("garch_test.png")
-# plt.close()
+# Generating
+x = model.generate(100, 252*5, load_params=True)
+print(model.params)
+plt.figure(figsize=(12,6))
+plt.plot(x.T)
+plt.xlabel("Timesteps")
+plt.ylabel("Prices")
+plt.legend([stock])
+plt.savefig("garch_test.png")
+plt.close()

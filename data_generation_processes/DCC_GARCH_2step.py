@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 from scipy.optimize import Bounds
 import yfinance as yf
+import pickle
 import GARCH
 
 class DCC_GARCH():
@@ -53,8 +54,8 @@ class DCC_GARCH():
             self.params = np.concatenate((np.var(self.a_data, axis=1), np.zeros(self.N*2)+0.2, np.zeros(self.N)+0.1, np.zeros(2)+0.2))   # parameters [N*alpha0, N*alpha, N*beta, N*gamma, a, b]
         else:
             self.params = np.concatenate((np.var(self.a_data, axis=1), np.zeros(self.N*2)+0.2, np.zeros(2)+0.2))   # parameters [N*alpha0, N*alpha, N*beta, a, b]
-
-        self.nll_losses = []                                                          # negative log likelihood array used to store training losses
+        
+        self.nll_losses = []                                                         # negative log likelihood array used to store training losses
         
         def constraint_ab(x):
             """DCC constraint a + b < 1"""
@@ -178,22 +179,25 @@ class DCC_GARCH():
         self.nll_losses.append(nll)
         return nll
     
-    def train(self):
+    def train(self, save_params = False):
         """Training loop"""
         garch_params = self.params[0:-2]
         garch_results = minimize(fun=self.garch_neg_log_likelihood, x0=garch_params, method="trust-constr",
                            options={'verbose': 3, 'maxiter': 2000, 'xtol': 1e-4}, constraints=self.garch_constraints, bounds=self.garch_bounds)
         self.params[0:-2] = garch_results.x
-        print(self.params)
         
         dcc_params = self.params[-2:]
         dcc_results = minimize(fun=self.dcc_neg_log_likelihood, x0=dcc_params, method="trust-constr",
                            options={'verbose': 3, 'maxiter': 2000, 'xtol': 1e-8}, constraints=self.dcc_constraints, bounds=self.dcc_bounds)
         self.params[-2:] = dcc_results.x
-        print(self.params)
+        
+        if save_params:
+            with open('dcc_garch_parameters.pickle', 'wb') as parameter_file:
+                pickle.dump(self.params, parameter_file)
+
         return self.params
 
-    def train_R(self):
+    def train_R(self, save_params=False):
         parameters = []
 
         for i in range(len(list(stocks.split(" ")))):
@@ -210,10 +214,19 @@ class DCC_GARCH():
         dcc_results = minimize(fun=self.dcc_neg_log_likelihood, x0=dcc_params, method="trust-constr",
                            options={'verbose': 3, 'maxiter': 2000, 'xtol': 1e-8}, constraints=self.dcc_constraints, bounds=self.dcc_bounds)
         self.params[-2:] = dcc_results.x
+
+        if save_params:
+            with open('dcc_garch_parameters.pickle', 'wb') as parameter_file:
+                pickle.dump(self.params, parameter_file)
+
         return self.params
     
-    def generate(self, S_0, num_points):
+    def generate(self, S_0, num_points, load_params=False):
         """Loop used to generate paths using the estimated parameters"""
+        if load_params:
+            with open('dcc_garch_parameters.pickle', 'rb') as parameter_file:
+                self.params = pickle.load(parameter_file)
+        
         prices = np.ones((self.N, num_points)) * S_0                                # (N, num_points) Paths of length num_points of the N assets
         self.D = np.diag(np.std(self.a_data, axis=1))
         self.R = np.corrcoef(self.a_data)
@@ -225,7 +238,7 @@ class DCC_GARCH():
             self.D_t(params=self.params)
             self.R_t(params=self.params)
         return prices
-    
+
 """
 ^GDAXI: DAX (Germany)
 ^IXIC: NASDAQ
@@ -240,12 +253,12 @@ MCD: McDonald's
 AAPL: Apple
 """
 
-stocks = "AAPL ^GDAXI ^IXIC ^GSPC ^DJI ^RUT ^N225 ^HSI ^NYA ^FCHI"
+stocks = "AAPL ^GSPC"
 garch_type = "gjr"
 
 dcc_garch_model = DCC_GARCH(stocks=stocks, type=garch_type)
 
-params = dcc_garch_model.train_R()
+params = dcc_garch_model.train_R(save_params=True)
 print(params)
 
 plt.figure(figsize=(12,6))
@@ -256,7 +269,7 @@ plt.savefig("dcc_nll_losses.png")
 plt.close()
 
 plt.figure(figsize=(12,6))
-x = dcc_garch_model.generate(S_0=100, num_points=252*5)
+x = dcc_garch_model.generate(S_0=100, num_points=252*5, load_params=True)
 plt.plot(x.T)
 plt.xlabel("Timesteps")
 plt.ylabel("Prices")
