@@ -110,29 +110,31 @@ class GARCH():
         
         return results.x
 
-    def generate(self, S_0, num_points, load_params=False):
+    def generate(self, S_0, batch_size, num_points, load_params=False):
         """Loop used to generate paths using the estimated parameters"""
         if load_params:
             with open('garch_parameters.pickle', 'rb') as parameter_file:
                 self.params = pickle.load(parameter_file)
         
-        prices = np.ones(num_points) * S_0
-        self.h = np.var(self.a_data)
+        prices = np.ones((batch_size, num_points)) * S_0
+        self.h = np.tile(np.var(self.a_data),(batch_size,1))
+        print("self.h.shape: ", self.h.shape)
         for t in range(num_points):
-            self.a_return = np.sqrt(self.h) * np.random.randn(1)
+            print("t: ", t)
+            self.a_return = np.sqrt(self.h) * np.random.randn(batch_size,1)
+            print("self.a_return.shape: ", self.a_return.shape)
             r_t = self.mu + self.a_return
-            prices[t+1:t+2] = prices[t:t+1]*np.exp(r_t)
+            print("r_t.shape: ", r_t.shape)
+            prices[:, t+1:t+2] = prices[:, t:t+1]*np.exp(r_t)
             self.h_t(params=self.params)
         
         return prices
 
+# stock = "AAPL"
 
+# model = GARCH(stock=stock, type="gjr")
 
-stock = "AAPL"
-
-model = GARCH(stock=stock, type="gjr")
-
-# Training
+# # Training
 # params = model.train(save_params=True)
 # print("parameters: ", params)
 
@@ -143,13 +145,13 @@ model = GARCH(stock=stock, type="gjr")
 # plt.savefig("garch_nll_losses.png")
 # plt.close()
 
-# Generating
-x = model.generate(100, 252*5, load_params=True)
-print(model.params)
-plt.figure(figsize=(12,6))
-plt.plot(x.T)
-plt.xlabel("Timesteps")
-plt.ylabel("Prices")
-plt.legend([stock])
-plt.savefig("garch_test.png")
-plt.close()
+# # Generating
+# x = model.generate(S_0=100, batch_size=1, num_points=252*5, load_params=True)
+# print(model.params)
+# plt.figure(figsize=(12,6))
+# plt.plot(x.T)
+# plt.xlabel("Timesteps")
+# plt.ylabel("Prices")
+# plt.legend([stock])
+# plt.savefig("garch_test.png")
+# plt.close()
