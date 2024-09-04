@@ -118,21 +118,19 @@ class GARCH():
         
         prices = np.ones((batch_size, num_points)) * S_0
         self.h = np.tile(np.var(self.a_data),(batch_size,1))
-        print("self.h.shape: ", self.h.shape)
+        
         for t in range(num_points):
-            print("t: ", t)
+            print("timestep: ", t)
             self.a_return = np.sqrt(self.h) * np.random.randn(batch_size,1)
-            print("self.a_return.shape: ", self.a_return.shape)
             r_t = self.mu + self.a_return
-            print("r_t.shape: ", r_t.shape)
             prices[:, t+1:t+2] = prices[:, t:t+1]*np.exp(r_t)
             self.h_t(params=self.params)
         
         return prices
 
-# stock = "AAPL"
+stock = "AAPL"
 
-# model = GARCH(stock=stock, type="gjr")
+model = GARCH(stock=stock, type="gjr")
 
 # # Training
 # params = model.train(save_params=True)
@@ -147,11 +145,23 @@ class GARCH():
 
 # # Generating
 # x = model.generate(S_0=100, batch_size=1, num_points=252*5, load_params=True)
-# print(model.params)
+# print("model_parameters: ", model.params)
 # plt.figure(figsize=(12,6))
-# plt.plot(x.T)
+# plt.plot(x[0].T)
 # plt.xlabel("Timesteps")
 # plt.ylabel("Prices")
 # plt.legend([stock])
 # plt.savefig("garch_test.png")
 # plt.close()
+
+# h = np.eye(3)*2
+# h_tiled = np.tile(h,(2,1,1))
+
+# h_diag = np.diagonal(h_tiled,axis1=-2, axis2=-1)
+# h_vec = np.diagonal(h_tiled,axis1=-2, axis2=-1)
+# print("h_vec: ", h_vec.shape)
+# mydiag=np.vectorize(np.diag, signature='(n)->(n,n)')
+# h_eye = mydiag(h_vec)
+# print("h_eye: ", h_eye.shape)
+# h_inv = np.linalg.inv(h_eye)
+# print(h_eye@h_inv)

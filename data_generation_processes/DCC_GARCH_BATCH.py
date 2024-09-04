@@ -102,6 +102,26 @@ class DCC_GARCH():
         
         return self.D
     
+    def D_t_batch(self, params, batch_size, t=0, train=False):
+        """
+            h_{n,t} = alpha0_{n} + alpha_{n} a_{n, t-1}^2 + beta_{n} h_{n, t-1}
+        """
+        alpha0 = np.expand_dims(params[0:self.N],axis=1)
+        alpha = np.expand_dims(params[self.N:2*self.N],axis=1)
+        beta = np.expand_dims(params[2*self.N:3*self.N], axis=1)
+        if self.type == "gjr":
+            gamma = np.expand_dims(params[3*self.N:4*self.N], axis=1)
+            I = np.where(self.a_return > 0, 0.0, 1.0)
+            alpha = alpha + gamma*I
+
+        h_vector = np.expand_dims(np.diagonal(self.D, axis1=-2, axis2=-1)**2, axis=2)
+        new_h_vector = alpha0 + alpha * self.a_return**2 + beta * h_vector
+        new_h_vector = np.reshape(new_h_vector, (batch_size, self.N))
+        mydiag=np.vectorize(np.diag, signature='(n)->(n,n)')
+        self.D = mydiag(np.sqrt(new_h_vector))
+        
+        return self.D
+    
     def R_t(self, params, t=0, train=False):
         """
             e_t = D_t^{-1} a_t \\sim N(0, R_t)
@@ -116,8 +136,23 @@ class DCC_GARCH():
         self.R = Q_diag_inv@self.Q@Q_diag_inv
 
         return self.R
+    
+    def R_t_batch(self, params, batch_size, t=0, train=False):
+        """
+            e_t = D_t^{-1} a_t \\sim N(0, R_t)
+            R_t = Q_t^{*-1} Q_t Q_t^{*-1}
+            Q_t = (1 - a - b) Q_bar + a e_{t-1} e_{t-1}^T + b Q_{t-1}
+        """
+        a = params[-2]
+        b = params[-1]
 
-    def r_t(self, t=0, train=False):
+        self.Q = (1 - a - b) * self.Q_bar + a * self.e@np.transpose(self.e, axes=(0,2,1)) + b * self.Q
+        mydiag=np.vectorize(np.diag, signature='(n)->(n,n)')
+        Q_diag_inv = np.linalg.inv(mydiag(np.sqrt(np.diagonal(self.Q, axis1=-2, axis2=-1))))
+        self.R = Q_diag_inv@self.Q@Q_diag_inv
+        return self.R
+
+    def r_t(self, batch_size, t=0, train=False):
         """
         r_t = mu + a_t
         a_t = H_factor * z_t
@@ -125,9 +160,10 @@ class DCC_GARCH():
         """
         self.H = self.D@self.R@self.D
         self.H_factor = np.linalg.cholesky(self.H)
-        self.a_return = self.H_factor@np.random.randn(self.N, 1)
+        self.a_return = self.H_factor@np.random.randn(batch_size, self.N, 1)
         self.r = self.mu + self.a_return
         self.e = np.linalg.inv(self.D)@self.a_return
+
         return self.r
     
     def garch_neg_log_likelihood(self, params):
@@ -221,22 +257,23 @@ class DCC_GARCH():
 
         return self.params
     
-    def generate(self, S_0, num_points, load_params=False):
+    def generate(self, S_0, batch_size, num_points, load_params=False):
         """Loop used to generate paths using the estimated parameters"""
         if load_params:
             with open('dcc_garch_parameters.pickle', 'rb') as parameter_file:
                 self.params = pickle.load(parameter_file)
         
-        prices = np.ones((self.N, num_points)) * S_0                                # (N, num_points) Paths of length num_points of the N assets
-        self.D = np.diag(np.std(self.a_data, axis=1))
-        self.R = np.corrcoef(self.a_data)
-        self.Q = self.Q_bar
+        prices = np.ones((batch_size, self.N, num_points)) * S_0                                # (N, num_points) Paths of length num_points of the N assets
+        self.D = np.tile(np.diag(np.std(self.a_data, axis=1)),(batch_size,1,1))
+        self.R = np.tile(np.corrcoef(self.a_data),(batch_size,1,1))
+        self.Q = np.tile(self.Q_bar,(batch_size,1,1))
 
         for t in range(num_points):
-            r_t = self.r_t()
-            prices[:, t+1:t+2] = prices[:, t:t+1]*np.exp(r_t)
-            self.D_t(params=self.params)
-            self.R_t(params=self.params)
+            print("timestep: ", t)
+            r_t = self.r_t(batch_size)
+            prices[:, :, t+1:t+2] = prices[:, :, t:t+1]*np.exp(r_t)
+            self.D_t_batch(params=self.params, batch_size=batch_size)
+            self.R_t_batch(params=self.params, batch_size=batch_size)
         return prices
 
 """
@@ -268,9 +305,11 @@ dcc_garch_model = DCC_GARCH(stocks=stocks, type=garch_type)
 # plt.savefig("dcc_nll_losses.png")
 # plt.close()
 
+num_points=252*5
+
 plt.figure(figsize=(12,6))
-x = dcc_garch_model.generate(S_0=100, num_points=252*5, load_params=True)
-plt.plot(x.T)
+x = dcc_garch_model.generate(S_0=100, batch_size=2**20, num_points=252*5, load_params=True)
+plt.plot(x[0].T)
 plt.xlabel("Timesteps")
 plt.ylabel("Prices")
 plt.legend(list(stocks.split(" ")))
