@@ -269,7 +269,7 @@ class DCC_GARCH():
         self.Q = np.tile(self.Q_bar,(batch_size,1,1))
 
         for t in range(num_points):
-            print("timestep: ", t)
+            print("timesteps: ", t)
             r_t = self.r_t(batch_size)
             prices[:, :, t+1:t+2] = prices[:, :, t:t+1]*np.exp(r_t)
             self.D_t_batch(params=self.params, batch_size=batch_size)
@@ -296,20 +296,22 @@ garch_type = "gjr"
 
 dcc_garch_model = DCC_GARCH(stocks=stocks, type=garch_type)
 
-params = dcc_garch_model.train_R(save_params=True)
-print(params)
+"""Training"""
+# params = dcc_garch_model.train_R(save_params=True)
+# print(params)
 
-plt.figure(figsize=(12,6))
-plt.plot(dcc_garch_model.nll_losses)
-plt.xlabel("Function Evaluations")
-plt.ylabel("Negative Log Likelihood")
-plt.savefig("dcc_nll_losses.png")
-plt.close()
+# plt.figure(figsize=(12,6))
+# plt.plot(dcc_garch_model.nll_losses)
+# plt.xlabel("Function Evaluations")
+# plt.ylabel("Negative Log Likelihood")
+# plt.savefig("dcc_nll_losses.png")
+# plt.close()
 
+"""Generating"""
 num_points=252*5
 
 plt.figure(figsize=(12,6))
-x = dcc_garch_model.generate(S_0=100, batch_size=2**20, num_points=252*5, load_params=True)
+x = dcc_garch_model.generate(S_0=100, batch_size=2**17, num_points=252*5, load_params=True)
 plt.plot(x[0].T)
 plt.xlabel("Timesteps")
 plt.ylabel("Prices")
