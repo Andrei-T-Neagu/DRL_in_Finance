@@ -290,20 +290,21 @@ MCD: McDonald's
 AAPL: Apple
 """
 
-stocks = "AAPL ^GSPC"
+stocks = "^GDAXI ^IXIC ^GSPC ^DJI ^RUT ^N225 ^HSI ^NYA ^FCHI"
+# stocks = "AAPL ^GSPC"
 garch_type = "gjr"
 
 dcc_garch_model = DCC_GARCH(stocks=stocks, type=garch_type)
 
-# params = dcc_garch_model.train_R(save_params=True)
-# print(params)
+params = dcc_garch_model.train_R(save_params=True)
+print(params)
 
-# plt.figure(figsize=(12,6))
-# plt.plot(dcc_garch_model.nll_losses)
-# plt.xlabel("Function Evaluations")
-# plt.ylabel("Negative Log Likelihood")
-# plt.savefig("dcc_nll_losses.png")
-# plt.close()
+plt.figure(figsize=(12,6))
+plt.plot(dcc_garch_model.nll_losses)
+plt.xlabel("Function Evaluations")
+plt.ylabel("Negative Log Likelihood")
+plt.savefig("dcc_nll_losses.png")
+plt.close()
 
 num_points=252*5
 

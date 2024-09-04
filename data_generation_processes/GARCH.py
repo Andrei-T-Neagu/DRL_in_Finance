@@ -128,9 +128,9 @@ class GARCH():
         
         return prices
 
-stock = "AAPL"
+# stock = "AAPL"
 
-model = GARCH(stock=stock, type="gjr")
+# model = GARCH(stock=stock, type="gjr")
 
 # # Training
 # params = model.train(save_params=True)
