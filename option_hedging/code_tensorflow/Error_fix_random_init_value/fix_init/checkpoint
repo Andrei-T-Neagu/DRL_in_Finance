@@ -1,0 +1,2 @@
+model_checkpoint_path: "/home/clarence/UQAM/Research/Global_Hedging_LOB_projet_Fred_Alex/Code_Alexandre/Pycharm_version/Error_fix_random_init_value/fix_init/models.ckpt"
+all_model_checkpoint_paths: "/home/clarence/UQAM/Research/Global_Hedging_LOB_projet_Fred_Alex/Code_Alexandre/Pycharm_version/Error_fix_random_init_value/fix_init/models.ckpt"

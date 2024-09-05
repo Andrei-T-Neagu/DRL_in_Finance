@@ -1,0 +1,176 @@
+
+######### WINER ######################
+
+batch_size = 50
+
+nbs_layers = 2
+nbs_units = 52  # fixe pour toutes les couches ("dimension" des matrices).
+prepro_stock = 'Log-moneyness'
+nbs_shares = 1
+epochs = 10
+train_paths = 50000# used by Alex --> 400000  # juste pour entraînement
+test_paths = 5000 # used by Alex -->50000  # juste pour évaluation: out-of-sample performance/résultats pour papier.
+lr = 0.001
+loss_type = 'RMSE'  # {'RMSE';'RSMSE'};
+
+# model parameters
+stock_dyn = 'BSM'
+[mu, sigma] = [0.10, 0.1898]
+params_vect = [mu, sigma]
+
+
+
+
+
+Model was trained with the loss function: RMSE
+Initial investment 15.082736227593784
+Mean Hedging error: -0.035580646
+CVaR_95: 9.2410, CVaR_99: 14.1613
+VaR_95: 6.4257, VaR_99: 10.8712
+MSE: 16.0935, RMSE: 4.0117
+Semi-MSE: 8.3586, Semi-RMSE: 2.8911
+Skew: 0.3456, Kurt: 1.5953
+Max error: 23.4035, Min error: -12.9800
+STD error: 4.0115
+Avg turnover of underlying: 0.9065
+ ----------------- 
+######################################################################
+
+nbs_layers = 2
+nbs_units = 52  # fixe pour toutes les couches ("dimension" des matrices).
+prepro_stock = 'Log-moneyness'
+nbs_shares = 1
+epochs = 10
+train_paths = 1000# used by Alex --> 400000  # juste pour entraînement
+test_paths = 500 # used by Alex -->50000  # juste pour évaluation: out-of-sample performance/résultats pour papier.
+lr = 0.001
+loss_type = 'RMSE'  # {'RMSE';'RSMSE'};
+
+# model parameters
+stock_dyn = 'BSM'
+[mu, sigma] = [0.10, 0.1898]
+params_vect = [mu, sigma]
+
+Model was trained with the loss function: RMSE
+Initial investment 15.082736227593784
+Mean Hedging error: -0.060553588
+CVaR_95: 13.9352, CVaR_99: 23.6706
+VaR_95: 9.1611, VaR_99: 17.1948
+MSE: 30.6522, RMSE: 5.5364
+Semi-MSE: 16.6456, Semi-RMSE: 4.0799
+Skew: 0.7916, Kurt: 3.2004
+Max error: 29.9284, Min error: -13.7526
+STD error: 5.5361
+Avg turnover of underlying: 0.8606
+ ----------------- 
+##################################################################
+nbs_layers = 2
+nbs_units = 52  # fixe pour toutes les couches ("dimension" des matrices).
+prepro_stock = 'Log-moneyness'
+nbs_shares = 1
+epochs = 10
+train_paths = 10000# used by Alex --> 400000  # juste pour entraînement
+test_paths = 500 # used by Alex -->50000  # juste pour évaluation: out-of-sample performance/résultats pour papier.
+lr = 0.001
+loss_type = 'RMSE'  # {'RMSE';'RSMSE'};
+
+Model was trained with the loss function: RMSE
+Initial investment 15.082736227593784
+Mean Hedging error: 0.058318943
+CVaR_95: 10.0144, CVaR_99: 14.1092
+VaR_95: 7.5624, VaR_99: 11.0883
+MSE: 19.0530, RMSE: 4.3650
+Semi-MSE: 10.2275, Semi-RMSE: 3.1980
+Skew: 0.2503, Kurt: 0.6420
+Max error: 17.1309, Min error: -12.0513
+STD error: 4.3646
+Avg turnover of underlying: 0.9004
+
+##################################################################
+nbs_layers = 2
+nbs_units = 52  # fixe pour toutes les couches ("dimension" des matrices).
+prepro_stock = 'Log-moneyness'
+nbs_shares = 1
+epochs = 10
+train_paths = 50000# used by Alex --> 400000  # juste pour entraînement
+test_paths = 500 # used by Alex -->50000  # juste pour évaluation: out-of-sample performance/résultats pour papier.
+lr = 0.001
+loss_type = 'RMSE'  # {'RMSE';'RSMSE'};
+
+
+
+
+Model was trained with the loss function: RMSE
+Initial investment 15.082736227593784
+Mean Hedging error: -0.042421468
+CVaR_95: 9.4503, CVaR_99: 14.2262
+VaR_95: 6.7433, VaR_99: 10.8259
+MSE: 18.3198, RMSE: 4.2802
+Semi-MSE: 9.2899, Semi-RMSE: 3.0479
+Skew: 0.3412, Kurt: 2.4569
+Max error: 37.8835, Min error: -12.8747
+STD error: 4.2800
+Avg turnover of underlying: 0.9125
+
+######################################################################
+nbs_layers = 2
+nbs_units = 52  # fixe pour toutes les couches ("dimension" des matrices).
+prepro_stock = 'Log-moneyness'
+nbs_shares = 1
+epochs = 10
+train_paths = 100000# used by Alex --> 400000  # juste pour entraînement
+test_paths = 500 # used by Alex -->50000  # juste pour évaluation: out-of-sample performance/résultats pour papier.
+lr = 0.001
+loss_type = 'RMSE'  # {'RMSE';'RSMSE'};
+
+
+
+
+ Global hedging RMSE results
+ ----------------- 
+Model was trained with the loss function: RMSE
+Initial investment 15.082736227593784
+Mean Hedging error: -0.25142235
+CVaR_95: 7.9165, CVaR_99: 11.8060
+VaR_95: 5.5678, VaR_99: 9.1454
+MSE: 15.2385, RMSE: 3.9036
+Semi-MSE: 6.7701, Semi-RMSE: 2.6019
+Skew: 0.0651, Kurt: 0.9712
+Max error: 18.5202, Min error: -12.6263
+STD error: 3.8955
+Avg turnover of underlying: 0.9318
+
+
+#####################################################################
+
+
+nbs_layers = 2
+nbs_units = 52  # fixe pour toutes les couches ("dimension" des matrices).
+prepro_stock = 'Log-moneyness'
+nbs_shares = 1
+epochs = 10
+train_paths = 300000# used by Alex --> 400000  # juste pour entraînement
+test_paths = 500 # used by Alex -->50000  # juste pour évaluation: out-of-sample performance/résultats pour papier.
+lr = 0.001
+loss_type = 'RMSE'  # {'RMSE';'RSMSE'};
+
+
+
+
+
+
+----- 
+Backend MacOSX is interactive backend. Turning interactive mode on.
+Model was trained with the loss function: RMSE
+Initial investment 15.082736227593784
+Mean Hedging error: 0.07816068
+CVaR_95: 9.2852, CVaR_99: 12.7733
+VaR_95: 6.7606, VaR_99: 10.9494
+MSE: 16.1335, RMSE: 4.0166
+Semi-MSE: 8.6142, Semi-RMSE: 2.9350
+Skew: 0.2120, Kurt: 0.9187
+Max error: 24.4603, Min error: -13.2060
+STD error: 4.0159
+Avg turnover of underlying: 0.9120
+
+

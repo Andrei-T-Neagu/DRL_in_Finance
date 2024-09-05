@@ -1,0 +1,137 @@
+####FIGURE 1#########
+
+
+Global hedging RSMSE results
+ ----------------- 
+Model was trained with the loss function: RSMSE
+Initial investment 0.4769835666664761
+Mean Hedging error: 0.0016133689
+CVaR_95: 1.1302, CVaR_99: 1.4191
+VaR_95: 0.9330, VaR_99: 1.2761
+MSE: 0.4168, RMSE: 0.6456
+Semi-MSE: 0.1931, Semi-RMSE: 0.4394
+Skew: -0.2174, Kurt: -0.7135
+Max error: 1.9752, Min error: -1.8467
+STD error: 0.6456
+Avg turnover of underlying: 0.6012
+1
+ ----------------- 
+ Global hedging RSMSE results
+ ----------------- 
+Model was trained with the loss function: RSMSE
+Initial investment 0.4769835666664761
+Mean Hedging error: 0.5015401
+CVaR_95: 1.9472, CVaR_99: 2.3801
+VaR_95: 1.6255, VaR_99: 2.1468
+MSE: 0.6653, RMSE: 0.8156
+Semi-MSE: 0.6314, Semi-RMSE: 0.7946
+Skew: 0.3396, Kurt: -0.0824
+Max error: 3.4755, Min error: -1.2822
+STD error: 0.6432
+Avg turnover of underlying: 0.2336
+4
+ ----------------- 
+ Global hedging RSMSE results
+ ----------------- 
+Model was trained with the loss function: RSMSE
+Initial investment 0.4769835666664761
+Mean Hedging error: 1.4872719
+CVaR_95: 4.4873, CVaR_99: 5.2334
+VaR_95: 3.9764, VaR_99: 4.8158
+MSE: 3.8691, RMSE: 1.9670
+Semi-MSE: 3.8690, Semi-RMSE: 1.9670
+Skew: 0.9767, Kurt: -0.2185
+Max error: 7.4795, Min error: -0.3251
+STD error: 1.2873
+Avg turnover of underlying: 0.0687
+0
+ ----------------- 
+ Global hedging RSMSE results
+ ----------------- 
+Model was trained with the loss function: RSMSE
+Initial investment 0.4769835666664761
+Mean Hedging error: 0.00010620221
+CVaR_95: 1.0885, CVaR_99: 1.3229
+VaR_95: 0.9327, VaR_99: 1.1868
+MSE: 0.3821, RMSE: 0.6181
+Semi-MSE: 0.1848, Semi-RMSE: 0.4299
+Skew: -0.0965, Kurt: -0.8561
+Max error: 2.2869, Min error: -1.5734
+STD error: 0.6181
+Avg turnover of underlying: 0.4978
+1
+ ----------------- 
+ Global hedging RSMSE results
+ ----------------- 
+Model was trained with the loss function: RSMSE
+Initial investment 0.4769835666664761
+Mean Hedging error: 0.5052243
+CVaR_95: 1.9861, CVaR_99: 2.4586
+VaR_95: 1.6409, VaR_99: 2.2019
+MSE: 0.6732, RMSE: 0.8205
+Semi-MSE: 0.6408, Semi-RMSE: 0.8005
+Skew: 0.4072, Kurt: 0.0509
+Max error: 3.5802, Min error: -1.1512
+STD error: 0.6465
+Avg turnover of underlying: 0.2209
+4
+ ----------------- 
+ Global hedging RSMSE results
+ ----------------- 
+Model was trained with the loss function: RSMSE
+Initial investment 0.4769835666664761
+Mean Hedging error: 1.5107838
+CVaR_95: 4.4833, CVaR_99: 5.2023
+VaR_95: 3.9759, VaR_99: 4.7938
+MSE: 3.9076, RMSE: 1.9768
+Semi-MSE: 3.9074, Semi-RMSE: 1.9767
+Skew: 0.9649, Kurt: -0.2252
+Max error: 6.8542, Min error: -0.4167
+STD error: 1.2748
+Avg turnover of underlying: 0.0692
+0
+ ----------------- 
+ Global hedging RSMSE results
+ ----------------- 
+Model was trained with the loss function: RSMSE
+Initial investment 0.4769835666664761
+Mean Hedging error: -0.0005955139
+CVaR_95: 1.1397, CVaR_99: 1.4673
+VaR_95: 0.9171, VaR_99: 1.3008
+MSE: 0.4196, RMSE: 0.6478
+Semi-MSE: 0.1947, Semi-RMSE: 0.4413
+Skew: -0.2031, Kurt: -0.6613
+Max error: 2.1473, Min error: -1.9281
+STD error: 0.6478
+Avg turnover of underlying: 0.6169
+1
+ ----------------- 
+ Global hedging RSMSE results
+ ----------------- 
+Model was trained with the loss function: RSMSE
+Initial investment 0.4769835666664761
+Mean Hedging error: 0.49661487
+CVaR_95: 1.9780, CVaR_99: 2.4412
+VaR_95: 1.6425, VaR_99: 2.1935
+MSE: 0.6695, RMSE: 0.8182
+Semi-MSE: 0.6351, Semi-RMSE: 0.7969
+Skew: 0.3934, Kurt: 0.0033
+Max error: 3.9428, Min error: -1.1485
+STD error: 0.6503
+Avg turnover of underlying: 0.2129
+4
+ ----------------- 
+ Global hedging RSMSE results
+ ----------------- 
+Model was trained with the loss function: RSMSE
+Initial investment 0.4769835666664761
+Mean Hedging error: 1.4827094
+CVaR_95: 4.4946, CVaR_99: 5.2036
+VaR_95: 4.0020, VaR_99: 4.8165
+MSE: 3.8957, RMSE: 1.9738
+Semi-MSE: 3.8956, Semi-RMSE: 1.9737
+Skew: 0.9637, Kurt: -0.2892
+Max error: 7.8538, Min error: -0.3122
+STD error: 1.3028
+Avg turnover of underlying: 0.0858
+

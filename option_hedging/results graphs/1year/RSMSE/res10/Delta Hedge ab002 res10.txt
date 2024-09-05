@@ -1,0 +1,14 @@
+ ----------------- 
+ Global hedging RSMSE results
+ -----------------
+Model was trained with the loss function: RSMSE
+Initial investment 75.60574347937086
+Mean Hedging error: 0.5781578
+CVaR_95: 43.5900, CVaR_99: 67.8843
+VaR_95: 29.3403, VaR_99: 51.9315
+MSE: 352.2940, RMSE: 18.7695
+Semi-MSE: 181.8040, Semi-RMSE: 13.4835
+Skew: 0.1836, Kurt: 1.9648
+Max error: 111.9045, Min error: -65.4991
+STD error: 18.7606
+Avg turnover of underlying: 0.8240

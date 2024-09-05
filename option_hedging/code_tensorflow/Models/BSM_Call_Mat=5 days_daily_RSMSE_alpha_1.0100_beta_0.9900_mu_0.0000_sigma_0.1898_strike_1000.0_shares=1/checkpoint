@@ -1,0 +1,2 @@
+model_checkpoint_path: "/home/clarence/UQAM/Research/Global_Hedging_LOB_projet_Fred_Alex/Code_Alexandre/Pycharm_version/Models/BSM_Call_Mat=5 days_daily_RSMSE_alpha_1.0100_beta_0.9900_mu_0.0000_sigma_0.1898_strike_1000.0_shares=1/models.ckpt"
+all_model_checkpoint_paths: "/home/clarence/UQAM/Research/Global_Hedging_LOB_projet_Fred_Alex/Code_Alexandre/Pycharm_version/Models/BSM_Call_Mat=5 days_daily_RSMSE_alpha_1.0100_beta_0.9900_mu_0.0000_sigma_0.1898_strike_1000.0_shares=1/models.ckpt"

@@ -1,0 +1,14 @@
+ -----------------
+ Delta hedge results
+ -----------------
+Model was trained with the loss function: Delta-hedge
+Initial investment 75.60574347937086
+Mean Hedging error: 38.560144012676986
+CVaR_95: 88.7479, CVaR_99: 105.8322
+VaR_95: 77.3418, VaR_99: 96.9046
+MSE: 2107.8847, RMSE: 45.9117
+Semi-MSE: 2092.2266, Semi-RMSE: 45.7409
+Skew: -0.1702, Kurt: 0.1339
+Max error: 145.7171, Min error: -47.8202
+STD error: 24.9199
+Avg turnover of underlying: 0.8209

@@ -1,0 +1,405 @@
+####################################################################
+alpha = 1.0000, beta = 1.0000, lamba_a = 0.00, lambda_b = 0.00
+####################################################################
+ ----------------- 
+ Deep Hedging RSMSE FFNN Results
+ ----------------- 
+Model was trained with the loss function: RSMSE
+Initial investment 4.76983566666479
+Mean Hedging error: 0.00061991304
+CVaR_95: 3.1786, CVaR_99: 4.8664
+VaR_95: 2.2239, VaR_99: 3.7379
+MSE: 2.3356, RMSE: 1.5283
+Semi-MSE: 1.0843, Semi-RMSE: 1.0413
+Skew: -0.0483, Kurt: 0.8753
+Max error: 15.5116, Min error: -4.6900
+STD error: 1.5283
+Avg turnover of underlying: 0.7091
+ ----------------- 
+ Delta Hedging Results
+ ----------------- 
+Model was trained with the loss function: Delta hedge
+Initial investment 4.76983566666479
+Mean Hedging error: -0.001197106409538799
+CVaR_95: 3.3364, CVaR_99: 4.9553
+VaR_95: 2.3491, VaR_99: 3.9356
+MSE: 1.9682, RMSE: 1.4029
+Semi-MSE: 1.0723, Semi-RMSE: 1.0355
+Skew: 0.4636, Kurt: 1.4770
+Max error: 13.4424, Min error: -4.6647
+STD error: 1.4029
+Avg turnover of underlying: 0.8207
+ ----------------- 
+Leland Delta Hedging Results
+ ----------------- 
+Model was trained with the loss function: Leland delta hedge
+Initial investment 4.76983566666479
+Mean Hedging error: -0.001197106409538799
+CVaR_95: 3.3364, CVaR_99: 4.9553
+VaR_95: 2.3491, VaR_99: 3.9356
+MSE: 1.9682, RMSE: 1.4029
+Semi-MSE: 1.0723, Semi-RMSE: 1.0355
+Skew: 0.4636, Kurt: 1.4770
+Max error: 13.4424, Min error: -4.6647
+STD error: 1.4029
+Avg turnover of underlying: 0.8207
+####################################################################
+alpha = 1.0010, beta = 0.9990, lamba_a = 0.00, lambda_b = 0.00
+####################################################################
+ ----------------- 
+ Deep Hedging RSMSE FFNN Results
+ ----------------- 
+Model was trained with the loss function: RSMSE
+Initial investment 4.76983566666479
+Mean Hedging error: 1.4948055
+CVaR_95: 5.5554, CVaR_99: 7.8799
+VaR_95: 4.2377, VaR_99: 6.3540
+MSE: 5.5286, RMSE: 2.3513
+Semi-MSE: 5.1472, Semi-RMSE: 2.2687
+Skew: 0.2371, Kurt: 1.7488
+Max error: 22.3407, Min error: -4.1802
+STD error: 1.8150
+Avg turnover of underlying: 0.4773
+ ----------------- 
+ Delta Hedging Results
+ ----------------- 
+Model was trained with the loss function: Delta hedge
+Initial investment 4.76983566666479
+Mean Hedging error: 1.986046045589292
+CVaR_95: 6.3035, CVaR_99: 8.3548
+VaR_95: 5.0037, VaR_99: 7.1137
+MSE: 6.6827, RMSE: 2.5851
+Semi-MSE: 6.6176, Semi-RMSE: 2.5725
+Skew: 0.9089, Kurt: 2.3327
+Max error: 17.4816, Min error: -3.6750
+STD error: 1.6548
+Avg turnover of underlying: 0.8207
+ ----------------- 
+Leland Delta Hedging Results
+ ----------------- 
+Model was trained with the loss function: Leland delta hedge
+Initial investment 4.76983566666479
+Mean Hedging error: 1.9138341120929576
+CVaR_95: 5.7927, CVaR_99: 7.6401
+VaR_95: 4.6364, VaR_99: 6.5070
+MSE: 6.1674, RMSE: 2.4834
+Semi-MSE: 6.0779, Semi-RMSE: 2.4653
+Skew: 0.5638, Kurt: 1.7138
+Max error: 16.2670, Min error: -3.7479
+STD error: 1.5826
+Avg turnover of underlying: 0.7646
+####################################################################
+alpha = 1.0020, beta = 0.9980, lamba_a = 0.00, lambda_b = 0.00
+####################################################################
+ ----------------- 
+ Deep Hedging RSMSE FFNN Results
+ ----------------- 
+Model was trained with the loss function: RSMSE
+Initial investment 4.76983566666479
+Mean Hedging error: 2.6075463
+CVaR_95: 7.3724, CVaR_99: 9.8139
+VaR_95: 6.0717, VaR_99: 8.0997
+MSE: 12.0091, RMSE: 3.4654
+Semi-MSE: 11.7113, Semi-RMSE: 3.4222
+Skew: 0.0764, Kurt: 0.8275
+Max error: 26.0779, Min error: -3.9246
+STD error: 2.2825
+Avg turnover of underlying: 0.3746
+ ----------------- 
+ Delta Hedging Results
+ ----------------- 
+Model was trained with the loss function: Delta hedge
+Initial investment 4.76983566666479
+Mean Hedging error: 3.924191903190454
+CVaR_95: 9.3994, CVaR_99: 11.8909
+VaR_95: 7.7961, VaR_99: 10.3888
+MSE: 19.5697, RMSE: 4.4238
+Semi-MSE: 19.5644, Semi-RMSE: 4.4232
+Skew: 1.0956, Kurt: 2.4271
+Max error: 21.9176, Min error: -3.3440
+STD error: 2.0422
+Avg turnover of underlying: 0.8207
+ ----------------- 
+Leland Delta Hedging Results
+ ----------------- 
+Model was trained with the loss function: Leland delta hedge
+Initial investment 4.76983566666479
+Mean Hedging error: 3.6670726809534027
+CVaR_95: 8.1052, CVaR_99: 10.1709
+VaR_95: 6.7972, VaR_99: 8.9236
+MSE: 16.7167, RMSE: 4.0886
+Semi-MSE: 16.7037, Semi-RMSE: 4.0870
+Skew: 0.5357, Kurt: 1.7047
+Max error: 18.9152, Min error: -3.4295
+STD error: 1.8081
+Avg turnover of underlying: 0.7208
+####################################################################
+alpha = 1.0000, beta = 1.0000, lamba_a = 1397.38, lambda_b = 1397.38
+####################################################################
+ ----------------- 
+ Deep Hedging RSMSE FFNN Results
+ ----------------- 
+Model was trained with the loss function: RSMSE
+Initial investment 4.76983566666479
+Mean Hedging error: -0.005662646
+CVaR_95: 3.2614, CVaR_99: 4.9265
+VaR_95: 2.2880, VaR_99: 3.8361
+MSE: 2.2504, RMSE: 1.5001
+Semi-MSE: 1.0921, Semi-RMSE: 1.0450
+Skew: 0.1006, Kurt: 1.0521
+Max error: 16.5917, Min error: -4.6906
+STD error: 1.5001
+Avg turnover of underlying: 0.7174
+ ----------------- 
+ Delta Hedging Results
+ ----------------- 
+Model was trained with the loss function: Delta hedge
+Initial investment 4.76983566666479
+Mean Hedging error: -0.0011971064096019139
+CVaR_95: 3.3364, CVaR_99: 4.9553
+VaR_95: 2.3491, VaR_99: 3.9356
+MSE: 1.9682, RMSE: 1.4029
+Semi-MSE: 1.0723, Semi-RMSE: 1.0355
+Skew: 0.4636, Kurt: 1.4770
+Max error: 13.4424, Min error: -4.6647
+STD error: 1.4029
+Avg turnover of underlying: 0.8207
+ ----------------- 
+Leland Delta Hedging Results
+ ----------------- 
+Model was trained with the loss function: Leland delta hedge
+Initial investment 4.76983566666479
+Mean Hedging error: -0.0011971064096019139
+CVaR_95: 3.3364, CVaR_99: 4.9553
+VaR_95: 2.3491, VaR_99: 3.9356
+MSE: 1.9682, RMSE: 1.4029
+Semi-MSE: 1.0723, Semi-RMSE: 1.0355
+Skew: 0.4636, Kurt: 1.4770
+Max error: 13.4424, Min error: -4.6647
+STD error: 1.4029
+Avg turnover of underlying: 0.8207
+####################################################################
+alpha = 1.0010, beta = 0.9990, lamba_a = 1397.38, lambda_b = 1397.38
+####################################################################
+ ----------------- 
+ Deep Hedging RSMSE FFNN Results
+ ----------------- 
+Model was trained with the loss function: RSMSE
+Initial investment 4.76983566666479
+Mean Hedging error: 1.3423592
+CVaR_95: 5.1615, CVaR_99: 7.0494
+VaR_95: 4.0934, VaR_99: 5.7626
+MSE: 4.9050, RMSE: 2.2147
+Semi-MSE: 4.5114, Semi-RMSE: 2.1240
+Skew: 0.1557, Kurt: 0.9321
+Max error: 19.6879, Min error: -4.1765
+STD error: 1.7615
+Avg turnover of underlying: 0.4945
+ ----------------- 
+ Delta Hedging Results
+ ----------------- 
+Model was trained with the loss function: Delta hedge
+Initial investment 4.76983566666479
+Mean Hedging error: 1.7409208231831563
+CVaR_95: 5.8467, CVaR_99: 7.8069
+VaR_95: 4.6067, VaR_99: 6.6088
+MSE: 5.5680, RMSE: 2.3597
+Semi-MSE: 5.4808, Semi-RMSE: 2.3411
+Skew: 0.8419, Kurt: 2.2064
+Max error: 16.8261, Min error: -3.7267
+STD error: 1.5929
+Avg turnover of underlying: 0.8207
+ ----------------- 
+Leland Delta Hedging Results
+ ----------------- 
+Model was trained with the loss function: Leland delta hedge
+Initial investment 4.76983566666479
+Mean Hedging error: 1.6838387345968866
+CVaR_95: 5.4205, CVaR_99: 7.1990
+VaR_95: 4.3132, VaR_99: 6.1030
+MSE: 5.2092, RMSE: 2.2824
+Semi-MSE: 5.0953, Semi-RMSE: 2.2573
+Skew: 0.5252, Kurt: 1.5967
+Max error: 15.7390, Min error: -3.7736
+STD error: 1.5407
+Avg turnover of underlying: 0.7686
+####################################################################
+alpha = 1.0020, beta = 0.9980, lamba_a = 1397.38, lambda_b = 1397.38
+####################################################################
+ ----------------- 
+ Deep Hedging RSMSE FFNN Results
+ ----------------- 
+Model was trained with the loss function: RSMSE
+Initial investment 4.76983566666479
+Mean Hedging error: 2.3476932
+CVaR_95: 6.9741, CVaR_99: 8.9067
+VaR_95: 5.8159, VaR_99: 7.6316
+MSE: 10.1658, RMSE: 3.1884
+Semi-MSE: 9.8839, Semi-RMSE: 3.1439
+Skew: 0.1132, Kurt: 0.4858
+Max error: 19.7443, Min error: -3.9363
+STD error: 2.1573
+Avg turnover of underlying: 0.4011
+ ----------------- 
+ Delta Hedging Results
+ ----------------- 
+Model was trained with the loss function: Delta hedge
+Initial investment 4.76983566666479
+Mean Hedging error: 3.4493073278448776
+CVaR_95: 8.4627, CVaR_99: 10.7615
+VaR_95: 6.9882, VaR_99: 9.3753
+MSE: 15.4577, RMSE: 3.9316
+Semi-MSE: 15.4491, Semi-RMSE: 3.9305
+Skew: 1.0287, Kurt: 2.3707
+Max error: 20.2106, Min error: -2.9055
+STD error: 1.8868
+Avg turnover of underlying: 0.8207
+ ----------------- 
+Leland Delta Hedging Results
+ ----------------- 
+Model was trained with the loss function: Leland delta hedge
+Initial investment 4.76983566666479
+Mean Hedging error: 3.2451927073305646
+CVaR_95: 7.4041, CVaR_99: 9.3448
+VaR_95: 6.1810, VaR_99: 8.1668
+MSE: 13.4685, RMSE: 3.6699
+Semi-MSE: 13.4499, Semi-RMSE: 3.6674
+Skew: 0.4919, Kurt: 1.6031
+Max error: 17.9175, Min error: -3.0649
+STD error: 1.7138
+Avg turnover of underlying: 0.7273
+####################################################################
+alpha = 1.0000, beta = 1.0000, lamba_a = -1.00, lambda_b = -1.00
+####################################################################
+ ----------------- 
+ Deep Hedging RSMSE FFNN Results
+ ----------------- 
+Model was trained with the loss function: RSMSE
+Initial investment 4.76983566666479
+Mean Hedging error: 0.0031707594
+CVaR_95: 3.1514, CVaR_99: 4.7531
+VaR_95: 2.2327, VaR_99: 3.7131
+MSE: 2.3330, RMSE: 1.5274
+Semi-MSE: 1.0870, Semi-RMSE: 1.0426
+Skew: -0.0659, Kurt: 0.6640
+Max error: 13.7770, Min error: -4.6947
+STD error: 1.5274
+Avg turnover of underlying: 0.7112
+ ----------------- 
+ Delta Hedging Results
+ ----------------- 
+Model was trained with the loss function: Delta hedge
+Initial investment 4.76983566666479
+Mean Hedging error: -0.0011971064096019813
+CVaR_95: 3.3364, CVaR_99: 4.9553
+VaR_95: 2.3491, VaR_99: 3.9356
+MSE: 1.9682, RMSE: 1.4029
+Semi-MSE: 1.0723, Semi-RMSE: 1.0355
+Skew: 0.4636, Kurt: 1.4770
+Max error: 13.4424, Min error: -4.6647
+STD error: 1.4029
+Avg turnover of underlying: 0.8207
+ ----------------- 
+Leland Delta Hedging Results
+ ----------------- 
+Model was trained with the loss function: Leland delta hedge
+Initial investment 4.76983566666479
+Mean Hedging error: -0.0011971064096019813
+CVaR_95: 3.3364, CVaR_99: 4.9553
+VaR_95: 2.3491, VaR_99: 3.9356
+MSE: 1.9682, RMSE: 1.4029
+Semi-MSE: 1.0723, Semi-RMSE: 1.0355
+Skew: 0.4636, Kurt: 1.4770
+Max error: 13.4424, Min error: -4.6647
+STD error: 1.4029
+Avg turnover of underlying: 0.8207
+####################################################################
+alpha = 1.0010, beta = 0.9990, lamba_a = -1.00, lambda_b = -1.00
+####################################################################
+ ----------------- 
+ Deep Hedging RSMSE FFNN Results
+ ----------------- 
+Model was trained with the loss function: RSMSE
+Initial investment 4.76983566666479
+Mean Hedging error: 1.3240312
+CVaR_95: 5.3112, CVaR_99: 7.3763
+VaR_95: 4.0829, VaR_99: 6.0638
+MSE: 4.8266, RMSE: 2.1970
+Semi-MSE: 4.4346, Semi-RMSE: 2.1058
+Skew: 0.2533, Kurt: 1.3478
+Max error: 20.2310, Min error: -4.2663
+STD error: 1.7532
+Avg turnover of underlying: 0.5159
+ ----------------- 
+ Delta Hedging Results
+ ----------------- 
+Model was trained with the loss function: Delta hedge
+Initial investment 4.76983566666479
+Mean Hedging error: 1.677392156438754
+CVaR_95: 5.7461, CVaR_99: 7.6967
+VaR_95: 4.5140, VaR_99: 6.5032
+MSE: 5.3060, RMSE: 2.3035
+Semi-MSE: 5.2127, Semi-RMSE: 2.2831
+Skew: 0.8415, Kurt: 2.2253
+Max error: 16.7319, Min error: -3.7530
+STD error: 1.5787
+Avg turnover of underlying: 0.8207
+ ----------------- 
+Leland Delta Hedging Results
+ ----------------- 
+Model was trained with the loss function: Leland delta hedge
+Initial investment 4.76983566666479
+Mean Hedging error: 1.629784685200017
+CVaR_95: 5.3653, CVaR_99: 7.1527
+VaR_95: 4.2523, VaR_99: 6.0515
+MSE: 5.0020, RMSE: 2.2365
+Semi-MSE: 4.8840, Semi-RMSE: 2.2100
+Skew: 0.5527, Kurt: 1.6649
+Max error: 15.7539, Min error: -3.7929
+STD error: 1.5316
+Avg turnover of underlying: 0.7734
+####################################################################
+alpha = 1.0020, beta = 0.9980, lamba_a = -1.00, lambda_b = -1.00
+####################################################################
+ ----------------- 
+ Deep Hedging RSMSE FFNN Results
+ ----------------- 
+Model was trained with the loss function: RSMSE
+Initial investment 4.76983566666479
+Mean Hedging error: 2.266948
+CVaR_95: 7.0998, CVaR_99: 9.4685
+VaR_95: 5.7544, VaR_99: 7.8901
+MSE: 10.0882, RMSE: 3.1762
+Semi-MSE: 9.7352, Semi-RMSE: 3.1201
+Skew: 0.1623, Kurt: 0.8453
+Max error: 23.7428, Min error: -3.9912
+STD error: 2.2247
+Avg turnover of underlying: 0.3942
+ ----------------- 
+ Delta Hedging Results
+ ----------------- 
+Model was trained with the loss function: Delta hedge
+Initial investment 4.76983566666479
+Mean Hedging error: 3.3239183087113595
+CVaR_95: 8.2616, CVaR_99: 10.5427
+VaR_95: 6.8005, VaR_99: 9.1672
+MSE: 14.4906, RMSE: 3.8066
+Semi-MSE: 14.4810, Semi-RMSE: 3.8054
+Skew: 1.0358, Kurt: 2.4268
+Max error: 20.0221, Min error: -2.9398
+STD error: 1.8553
+Avg turnover of underlying: 0.8207
+ ----------------- 
+Leland Delta Hedging Results
+ ----------------- 
+Model was trained with the loss function: Leland delta hedge
+Initial investment 4.76983566666479
+Mean Hedging error: 3.1516657490241786
+CVaR_95: 7.3125, CVaR_99: 9.2689
+VaR_95: 6.0771, VaR_99: 8.0822
+MSE: 12.8132, RMSE: 3.5796
+Semi-MSE: 12.7940, Semi-RMSE: 3.5769
+Skew: 0.5423, Kurt: 1.7140
+Max error: 17.9523, Min error: -3.0745
+STD error: 1.6971
+Avg turnover of underlying: 0.7351

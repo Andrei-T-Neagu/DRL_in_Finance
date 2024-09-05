@@ -1,0 +1,9 @@
+|---------------------------Hyperparameter Tuning for FFNN for 25 Epochs------------------------|
+{'batch_size': 128, 'nbs_layers': 6, 'nbs_units': 256}: Validation Loss: 25.153255462646484 | Test Loss: 25.23818588256836 | Number of Parameters: 331009 | Time Taken: 0:08:11.921575
+{'batch_size': 128, 'nbs_layers': 3, 'nbs_units': 256}: Validation Loss: 25.196332931518555 | Test Loss: 25.300533294677734 | Number of Parameters: 133633 | Time Taken: 0:06:54.086205
+{'batch_size': 512, 'nbs_layers': 3, 'nbs_units': 256}: Validation Loss: 25.197139739990234 | Test Loss: 25.285106658935547 | Number of Parameters: 133633 | Time Taken: 0:01:42.988563
+{'batch_size': 512, 'nbs_layers': 3, 'nbs_units': 512}: Validation Loss: 25.200654983520508 | Test Loss: 25.29050636291504 | Number of Parameters: 529409 | Time Taken: 0:01:47.092229
+{'batch_size': 512, 'nbs_layers': 6, 'nbs_units': 256}: Validation Loss: 25.444416046142578 | Test Loss: 25.544540405273438 | Number of Parameters: 331009 | Time Taken: 0:02:01.375318
+{'batch_size': 128, 'nbs_layers': 6, 'nbs_units': 512}: Validation Loss: 25.463855743408203 | Test Loss: 25.57847785949707 | Number of Parameters: 1317377 | Time Taken: 0:08:11.253985
+{'batch_size': 512, 'nbs_layers': 6, 'nbs_units': 512}: Validation Loss: 25.4937801361084 | Test Loss: 25.59524917602539 | Number of Parameters: 1317377 | Time Taken: 0:02:34.715457
+{'batch_size': 128, 'nbs_layers': 3, 'nbs_units': 512}: Validation Loss: 25.626588821411133 | Test Loss: 25.69695472717285 | Number of Parameters: 529409 | Time Taken: 0:06:53.414613
