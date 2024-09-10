@@ -28,13 +28,16 @@ class DCC_GARCH():
     def __init__(self, stocks, start="2000-01-01", end="2024-08-20", type="vanilla"):
         """
             Args:
-            data: (N,T) numpy array of T timesteps of N asset log returns
+            stocks: string of stocks tickers to be used to download the yfinance data
+            start:  "YYYY-MM-DD" used by yfinance as the start date to download stock data
+            end:    "YYYY-MM-DD" used by yfinance as the end date to download stock data
+            type:   "vanilla" or "gjr"
         """
         market_data = yf.download(stocks, start=start, end=end, interval="1d")
         log_returns = np.log(market_data['Close'] / market_data['Close'].shift(1)).dropna()
         self.data = log_returns.to_numpy().T                                        #(N, T) Dataset of log returns
-        print("Number of time steps: ", self.data.shape[1])
-        self.type = type
+        
+        self.type = type                                                            # GARCH type
         self.N = self.data.shape[0]                                                 # Number of assets
         self.T = self.data.shape[1]                                                 # Number of time steps                                                                                    
         self.r_data = self.data                                                     #(N, T) Log returns of the data
@@ -51,11 +54,11 @@ class DCC_GARCH():
         self.Q_bar = self.e_data@self.e_data.T/self.T                               #(N, N) Q_bar using e_data                                          
         self.num_params_garch = 4 if self.type == "gjr" else 3
         if type == "gjr":
-            self.params = np.concatenate((np.var(self.a_data, axis=1), np.zeros(self.N*2)+0.2, np.zeros(self.N)+0.1, np.zeros(2)+0.2))   # parameters [N*alpha0, N*alpha, N*beta, N*gamma, a, b]
+            self.params = np.concatenate((np.var(self.a_data, axis=1), np.zeros(self.N*2)+0.2, np.zeros(self.N)+0.1, np.zeros(2)+0.2))      # parameters [N*alpha0, N*alpha, N*beta, N*gamma, a, b]
         else:
-            self.params = np.concatenate((np.var(self.a_data, axis=1), np.zeros(self.N*2)+0.2, np.zeros(2)+0.2))   # parameters [N*alpha0, N*alpha, N*beta, a, b]
+            self.params = np.concatenate((np.var(self.a_data, axis=1), np.zeros(self.N*2)+0.2, np.zeros(2)+0.2))                            # parameters [N*alpha0, N*alpha, N*beta, a, b]
         
-        self.nll_losses = []                                                         # negative log likelihood array used to store training losses
+        self.nll_losses = []                                                        # negative log likelihood array used to store training losses
         
         def constraint_ab(x):
             """DCC constraint a + b < 1"""
@@ -76,11 +79,11 @@ class DCC_GARCH():
         
         self.dcc_constraints = [{'type':'ineq', 'fun':constraint_ab}]
 
-        self.garch_bounds = Bounds([np.finfo(float).eps for i in range(self.N*self.num_params_garch)],        # Bounds (0,inf) for alpha_0, alpha, beta, gamma(if gjr)
+        self.garch_bounds = Bounds([np.finfo(float).eps for i in range(self.N*self.num_params_garch)],      # Bounds (0,inf) for alpha_0, alpha, beta, gamma(if gjr)
                              [np.inf for i in range(self.N*self.num_params_garch)], 
                              keep_feasible=[True for i in range(self.N*self.num_params_garch)])
 
-        self.dcc_bounds = Bounds([np.finfo(float).eps for i in range(2)],        # Bounds (0,inf) for a, b 
+        self.dcc_bounds = Bounds([np.finfo(float).eps for i in range(2)],                                   # Bounds (0,inf) for a, b 
                              [np.inf for i in range(2)], 
                              keep_feasible=[True for i in range(2)])
 
@@ -102,6 +105,7 @@ class DCC_GARCH():
         
         return self.D
     
+    #Batch D
     def D_t_batch(self, params, batch_size, t=0, train=False):
         """
             h_{n,t} = alpha0_{n} + alpha_{n} a_{n, t-1}^2 + beta_{n} h_{n, t-1}
@@ -137,6 +141,7 @@ class DCC_GARCH():
 
         return self.R
     
+    # Batch R
     def R_t_batch(self, params, batch_size, t=0, train=False):
         """
             e_t = D_t^{-1} a_t \\sim N(0, R_t)
@@ -234,6 +239,7 @@ class DCC_GARCH():
         return self.params
 
     def train_R(self, save_params=False):
+        """Function used to train the individual asset GARCH parameters and the paramters a, b of correlation matrix R of DCC-GARCH"""
         parameters = []
 
         for i in range(len(list(stocks.split(" ")))):
@@ -258,7 +264,7 @@ class DCC_GARCH():
         return self.params
     
     def generate(self, S_0, batch_size, num_points, load_params=False):
-        """Loop used to generate paths using the estimated parameters"""
+        """Loop used to generate batches of paths using the estimated parameters"""
         if load_params:
             with open('dcc_garch_parameters.pickle', 'rb') as parameter_file:
                 self.params = pickle.load(parameter_file)
@@ -296,7 +302,7 @@ garch_type = "gjr"
 
 dcc_garch_model = DCC_GARCH(stocks=stocks, type=garch_type)
 
-"""Training"""
+# """Training"""
 # params = dcc_garch_model.train_R(save_params=True)
 # print(params)
 
@@ -311,7 +317,7 @@ dcc_garch_model = DCC_GARCH(stocks=stocks, type=garch_type)
 num_points=252*5
 
 plt.figure(figsize=(12,6))
-x = dcc_garch_model.generate(S_0=100, batch_size=2**17, num_points=252*5, load_params=True)
+x = dcc_garch_model.generate(S_0=100, batch_size=2**2, num_points=252*5, load_params=True)
 plt.plot(x[0].T)
 plt.xlabel("Timesteps")
 plt.ylabel("Prices")

@@ -57,8 +57,8 @@ class DeepAgent():
         self.lr = lr
         self.prepro_stock = prepro_stock
         self.nbs_shares = nbs_shares
-        self.N = self.nbs_point_traj - 1    #number of time-steps
-        self.dt = self.T / self.N    # time_step size
+        self.N = self.nbs_point_traj - 1   # number of time-steps
+        self.dt = self.T / self.N       # time_step size
 
         self.A_0 = 0    #initial value of persistence impact for the ask
         self.lambda_a = lambdas[0]    #persistence parameter for the ask
@@ -73,9 +73,9 @@ class DeepAgent():
         self.name = name
         print("Initial value of the portfolio: ", V_0)
 
-    # Simulate a batch of paths and hedging errors
-    def simulate_batch(self, test_path=None):
-
+    # Simulate a batch of hedging errors
+    def simulate_batch(self, batch):
+        
         self.delta_t = torch.zeros(self.batch_size, device=self.device) #number of shares at each time step
         # Extract model parameters
         if self.stock_dyn == "BSM":
@@ -103,7 +103,7 @@ class DeepAgent():
             self.S_t = math.log(self.S_0 / self.strike) * torch.ones(self.batch_size, device=self.device)
         elif self.prepro_stock == "none":
             self.S_t = self.S_0 * torch.ones(self.batch_size, device=self.device)
-
+        
         A_t = self.A_0 * torch.ones(self.batch_size, device=self.device)
         B_t = self.B_0 * torch.ones(self.batch_size, device=self.device)
 
@@ -155,13 +155,7 @@ class DeepAgent():
 
             # Update features for next time step (market impact persistence already updated)
             # Update stock price
-            if test_path is not None:
-                self.S_t = test_path[t+1]
-            else:
-                if self.stock_dyn == "BSM":
-                    Z = torch.randn(self.batch_size, device=self.device)
-                    self.S_t = self.S_t * torch.exp((self.mu - self.sigma ** 2 / 2) * self.dt + self.sigma * math.sqrt(self.dt) * Z)
-
+            self.S_t = batch[:,t+1].to(device=self.device)
             self.S_t_tensor = torch.cat((self.S_t_tensor, torch.unsqueeze(self.S_t, dim=0)), dim=0)
             self.delta_t = self.strategy[t, :, 0]
 
@@ -271,7 +265,7 @@ class DeepAgent():
             loss = torch.sqrt(torch.mean(torch.square(torch.where(self.hedging_error > 0, self.hedging_error, 0)))) / self.nbs_shares
         return loss
 
-    def train(self, train_size, epochs, lr_schedule = True):
+    def train(self, train_set, train_size, epochs, lr_schedule = True):
         start = dt.datetime.now()  # compute time
         self.losses_epochs = np.array([])
         best_loss = 99999999
@@ -299,11 +293,16 @@ class DeepAgent():
             # mini batch training
             for i in range(int(train_size/self.batch_size)):
                 
+                if i % 100 == 0:
+                    print("BATCH: " + str(i) + "/" + str(int(train_size/self.batch_size)))
+
                 # Zero out gradients
                 self.optimizer.zero_grad()
+                
+                batch = train_set[i*self.batch_size:(i+1)*self.batch_size,:]
 
-                # Simulate batch
-                hedging_error, strategy, S_t_tensor, V_t_tensor, A_t_tensor, B_t_tensor = self.simulate_batch()
+                # Perform action on batch
+                hedging_error, strategy, S_t_tensor, V_t_tensor, A_t_tensor, B_t_tensor = self.simulate_batch(batch=batch)
                 
                 # Compute and backprop loss
                 loss = self.loss()
@@ -356,7 +355,7 @@ class DeepAgent():
 
             epoch += 1
 
-        torch.save(self.model, "/home/a_eagu/Deep-Hedging-with-Market-Impact/" + self.name)
+        torch.save(self.model, self.name)
 
         return all_losses, self.losses_epochs
     
@@ -372,9 +371,12 @@ class DeepAgent():
 
         for i in range(int(test_size/self.batch_size)):
             with torch.no_grad():
+                
+                if i % 100 == 0:
+                    print("BATCH: " + str(i) + "/" + str(int(test_size/self.batch_size)))
 
-                test_path = test_set[i]
-                hedging_error, strategy, S_t_tensor, V_t_tensor, A_t_tensor, B_t_tensor = self.simulate_batch(test_path)
+                batch = test_set[i*self.batch_size:(i+1)*self.batch_size,:]
+                hedging_error, strategy, S_t_tensor, V_t_tensor, A_t_tensor, B_t_tensor = self.simulate_batch(batch=batch)
 
                 strategy_pred.append(strategy.detach().cpu().numpy())
                 hedging_err_pred.append(hedging_error.detach().cpu().numpy())

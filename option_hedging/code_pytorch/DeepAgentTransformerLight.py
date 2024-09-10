@@ -97,7 +97,7 @@ class DeepAgent():
         print("Initial value of the portfolio: ", V_0)
 
     # Simulate a batch of paths and hedging errors
-    def simulate_batch(self, test_path=None):
+    def simulate_batch(self, batch):
         
         # padding mask that is passed to the transformer
         input_t_seq_mask = torch.ones(self.batch_size, self.N, device=self.device).type(torch.bool)
@@ -192,13 +192,7 @@ class DeepAgent():
 
             # Update features for next time step (market impact persistence already updated)
             # Update stock price
-            if test_path is not None:
-                self.S_t = test_path[t+1]
-            else:
-                if self.stock_dyn == "BSM":
-                    Z = torch.randn(self.batch_size, device=self.device)
-                    self.S_t = self.S_t * torch.exp((self.mu - self.sigma ** 2 / 2) * self.dt + self.sigma * math.sqrt(self.dt) * Z)
-
+            self.S_t = batch[:,t+1].to(device=self.device)
             self.S_t_tensor = torch.cat((self.S_t_tensor, torch.unsqueeze(self.S_t, dim=0)), dim=0)
             self.delta_t = self.strategy[t, :, 0]
 
@@ -308,7 +302,7 @@ class DeepAgent():
             loss = torch.sqrt(torch.mean(torch.square(torch.where(hedging_error > 0, hedging_error, 0)))) / self.nbs_shares
         return loss
 
-    def train(self, train_size, epochs, lr_schedule = True):
+    def train(self, train_set, train_size, epochs, lr_schedule = True):
         start = dt.datetime.now()  # compute time
         self.losses_epochs = np.array([])
         best_loss = 99999999
@@ -340,8 +334,10 @@ class DeepAgent():
                 # Zero out gradients
                 self.optimizer.zero_grad()
 
+                batch = train_set[i*self.batch_size:(i+1)*self.batch_size,:]
+
                 # Simulate batch
-                hedging_error, strategy, S_t_tensor, V_t_tensor, A_t_tensor, B_t_tensor = self.simulate_batch()
+                hedging_error, strategy, S_t_tensor, V_t_tensor, A_t_tensor, B_t_tensor = self.simulate_batch(batch=batch)
 
                 # Compute and backprop loss
                 loss = self.loss(hedging_error)
@@ -394,7 +390,7 @@ class DeepAgent():
 
             epoch += 1
 
-        torch.save(self.model, "/home/a_eagu/Deep-Hedging-with-Market-Impact/" + self.name)
+        torch.save(self.model, self.name)
 
         return all_losses, self.losses_epochs
     
@@ -418,8 +414,11 @@ class DeepAgent():
         for i in range(int(test_size/self.batch_size)):
             with torch.no_grad():
 
-                test_path = test_set[i]
-                hedging_error, strategy, S_t_tensor, V_t_tensor, A_t_tensor, B_t_tensor = self.simulate_batch(test_path)
+                if i % 100 == 0:
+                    print("BATCH: " + str(i) + "/" + str(int(test_size/self.batch_size)))
+
+                batch = test_set[i*self.batch_size:(i+1)*self.batch_size,:]
+                hedging_error, strategy, S_t_tensor, V_t_tensor, A_t_tensor, B_t_tensor = self.simulate_batch(batch=batch)
 
                 strategy_pred.append(strategy.detach().cpu().numpy())
                 hedging_err_pred.append(hedging_error.detach().cpu().numpy())

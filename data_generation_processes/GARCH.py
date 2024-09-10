@@ -22,9 +22,13 @@ class GARCH():
     """
     def __init__(self, dcc=False, data=None, stock=None, start="2000-01-01", end="2024-08-20", type = "vanilla"):
         """
-            Args:
-            data: (N,T) numpy array of T timesteps asset log returns
-            type: "vanilla" or "gjr"
+            Args:   
+            dcc:    True if used in the DCC_GARCH classes
+            data:   (N,T) T stock prices of the N assets. Only used in the DCC_GARCH classes
+            stock:  stock ticker to be used to download the yfinance data
+            start:  "YYYY-MM-DD" used by yfinance as the start date to download stock data
+            end:    "YYYY-MM-DD" used by yfinance as the end date to download stock data
+            type:   "vanilla" or "gjr"
         """
         if dcc:
             self.data = data
@@ -32,16 +36,16 @@ class GARCH():
             market_data = yf.download(stock, start=start, end=end, interval="1d")
             log_returns = np.log(market_data['Close'] / market_data['Close'].shift(1)).dropna()
             self.data = log_returns.to_numpy().T
-        self.type = type
-        self.T = self.data.shape[0]                                                 # Number of time steps in the data
-        self.r_data = self.data                                                     #(T,) log returns of the asset
-        self.mu = np.mean(self.r_data)                                              # expected value of r_t
-        self.a_data = self.r_data - np.mean(self.r_data)                            #(T,) mean-corrected returns of asset
-        self.h = np.var(self.a_data)                                                # conditional variance of a_t
-        self.a_return = self.h * np.random.randn(1)                                 # generated a_t
-        self.num_params_garch = 4 if self.type == "gjr" else 3                      # number of parameters for the garch or gjr-garch model
-        self.params = np.concatenate(([np.var(self.a_data)],np.zeros(self.num_params_garch-1)+0.4))   #(3,) or (4,) Set of parameters alpha_0, alpha, beta, gamma(if gjr)
-        self.nll_losses = []                                                        # To store nll losses during training
+        self.type = type                                                                                # Garch type
+        self.T = self.data.shape[0]                                                                     # Number of time steps in the data
+        self.r_data = self.data                                                                         #(T,) log returns of the asset
+        self.mu = np.mean(self.r_data)                                                                  # expected value of r_t
+        self.a_data = self.r_data - np.mean(self.r_data)                                                #(T,) mean-corrected returns of asset
+        self.h = np.var(self.a_data)                                                                    # conditional variance of a_t
+        self.a_return = self.h * np.random.randn(1)                                                     # generated a_t
+        self.num_params_garch = 4 if self.type == "gjr" else 3                                          # number of parameters for the garch or gjr-garch model
+        self.params = np.concatenate(([np.var(self.a_data)],np.zeros(self.num_params_garch-1)+0.4))     #(3,) or (4,) Set of parameters alpha_0, alpha, beta, gamma(if gjr)
+        self.nll_losses = []                                                                            # Arrya to store nll losses during training
 
         if self.type == "vanilla":
             def constraint_alpha_beta(x):
@@ -111,7 +115,7 @@ class GARCH():
         return results.x
 
     def generate(self, S_0, batch_size, num_points, load_params=False):
-        """Loop used to generate paths using the estimated parameters"""
+        """Loop used to generate paths using the estimated parameters, where the batch size is specified"""
         if load_params:
             with open('garch_parameters.pickle', 'rb') as parameter_file:
                 self.params = pickle.load(parameter_file)
@@ -128,13 +132,12 @@ class GARCH():
         
         return prices
 
-# stock = "AAPL"
+stock = "^GSPC"
 
-# model = GARCH(stock=stock, type="gjr")
+model = GARCH(stock=stock, start="1986-12-31", end="2010-04-01", type="gjr")
 
-# # Training
+# """Training"""
 # params = model.train(save_params=True)
-# print("parameters: ", params)
 
 # plt.figure(figsize=(12,6))
 # plt.plot(model.nll_losses)
@@ -143,25 +146,14 @@ class GARCH():
 # plt.savefig("garch_nll_losses.png")
 # plt.close()
 
-# # Generating
-# x = model.generate(S_0=100, batch_size=1, num_points=252*5, load_params=True)
+"""Generating"""
+x = model.generate(S_0=100, batch_size=2**1, num_points=252*5, load_params=True)
 # print("model_parameters: ", model.params)
-# plt.figure(figsize=(12,6))
-# plt.plot(x[0].T)
-# plt.xlabel("Timesteps")
-# plt.ylabel("Prices")
-# plt.legend([stock])
-# plt.savefig("garch_test.png")
-# plt.close()
-
-# h = np.eye(3)*2
-# h_tiled = np.tile(h,(2,1,1))
-
-# h_diag = np.diagonal(h_tiled,axis1=-2, axis2=-1)
-# h_vec = np.diagonal(h_tiled,axis1=-2, axis2=-1)
-# print("h_vec: ", h_vec.shape)
-# mydiag=np.vectorize(np.diag, signature='(n)->(n,n)')
-# h_eye = mydiag(h_vec)
-# print("h_eye: ", h_eye.shape)
-# h_inv = np.linalg.inv(h_eye)
-# print(h_eye@h_inv)
+print(x.shape)
+plt.figure(figsize=(12,6))
+plt.plot(x[0].T)
+plt.xlabel("Timesteps")
+plt.ylabel("Prices")
+plt.legend([stock])
+plt.savefig("garch_test.png")
+plt.close()
