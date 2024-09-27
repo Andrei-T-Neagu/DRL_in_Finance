@@ -24,12 +24,12 @@ global_path_prefix = "/home/a_eagu/DRL_in_Finance/option_hedging/code_pytorch/"
 nbs_point_traj = 253
 time_period = "day"
 T = 252/252
-alpha = 1.000
-beta = 1.000
+alpha = 1.010
+beta = 0.990
 
 batch_size = 512
-train_size = 2**20
-test_size = 2**20
+train_size = 2**15
+test_size = 2**15
 epochs = 1
 r_borrow = 0
 r_lend = 0
@@ -60,7 +60,7 @@ else:
     V_0 = Utils_general.BlackScholes_price(S_0, T, r_borrow, params_vect[1], strike, -1)
 
 # Initialize the garch model
-garch_model = GARCH(stock=stock, start="1986-12-31", end="2010-04-01", type="gjr")
+garch_model = GARCH(stock=stock, start="1986-12-31", end="2010-04-01", interval= "1d", type="gjr")
 
 # Creating Black-Scholes datasets
 def generate_BS_dataset(dataset_type="train_set", size=train_size):
@@ -88,9 +88,9 @@ def generate_garch_dataset(dataset_type="train_set", size=train_size):
     torch.save(dataset, global_path_prefix + str(dataset_type))
 
 """Training the garch model and generating the datasets"""
-# train_garch()
-# generate_garch_dataset(dataset_type="train_set", size=train_size)
-# generate_garch_dataset(dataset_type="test_set", size=test_size)
+train_garch()
+generate_garch_dataset(dataset_type="train_set", size=train_size)
+generate_garch_dataset(dataset_type="test_set", size=test_size)
 
 # Select the device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

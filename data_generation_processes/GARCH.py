@@ -20,20 +20,21 @@ class GARCH():
         h_t:        conditional variance of a_t at time t.
         z_t:        iid errors such that E[z_t] = 0 and E[z_t z_t] = 1.
     """
-    def __init__(self, dcc=False, data=None, stock=None, start="2000-01-01", end="2024-08-20", type = "vanilla"):
+    def __init__(self, dcc=False, data=None, stock=None, start="2000-01-01", end="2024-08-20", interval="1d", type = "vanilla"):
         """
             Args:   
-            dcc:    True if used in the DCC_GARCH classes
-            data:   (N,T) T stock prices of the N assets. Only used in the DCC_GARCH classes
-            stock:  stock ticker to be used to download the yfinance data
-            start:  "YYYY-MM-DD" used by yfinance as the start date to download stock data
-            end:    "YYYY-MM-DD" used by yfinance as the end date to download stock data
-            type:   "vanilla" or "gjr"
+            dcc:        True if used in the DCC_GARCH classes
+            data:       (N,T) T stock prices of the N assets. Only used in the DCC_GARCH classes
+            stock:      stock ticker to be used to download the yfinance data
+            start:      "YYYY-MM-DD" used by yfinance as the start date to download stock data
+            end:        "YYYY-MM-DD" used by yfinance as the end date to download stock data
+            interval:   Valid intervals: [1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo]
+            type:       "vanilla" or "gjr"
         """
         if dcc:
             self.data = data
         else:
-            market_data = yf.download(stock, start=start, end=end, interval="1d")
+            market_data = yf.download(stock, start=start, end=end, interval=interval)
             log_returns = np.log(market_data['Close'] / market_data['Close'].shift(1)).dropna()
             self.data = log_returns.to_numpy().T
         self.type = type                                                                                # Garch type
@@ -42,10 +43,10 @@ class GARCH():
         self.mu = np.mean(self.r_data)                                                                  # expected value of r_t
         self.a_data = self.r_data - np.mean(self.r_data)                                                #(T,) mean-corrected returns of asset
         self.h = np.var(self.a_data)                                                                    # conditional variance of a_t
-        self.a_return = self.h * np.random.randn(1)                                                     # generated a_t
+        self.a_return = np.sqrt(self.h) * np.random.randn(1)                                                     # generated a_t
         self.num_params_garch = 4 if self.type == "gjr" else 3                                          # number of parameters for the garch or gjr-garch model
-        self.params = np.concatenate(([np.var(self.a_data)],np.zeros(self.num_params_garch-1)+0.4))     #(3,) or (4,) Set of parameters alpha_0, alpha, beta, gamma(if gjr)
-        self.nll_losses = []                                                                            # Arrya to store nll losses during training
+        self.params = np.concatenate(([np.var(self.a_data)],np.zeros(self.num_params_garch-1)+0.3))     #(3,) or (4,) Set of parameters alpha_0, alpha, beta, gamma(if gjr)
+        self.nll_losses = []                                                                            # Array to store nll losses during training
 
         if self.type == "vanilla":
             def constraint_alpha_beta(x):
@@ -124,7 +125,8 @@ class GARCH():
         self.h = np.tile(np.var(self.a_data),(batch_size,1))
         
         for t in range(num_points):
-            print("timestep: ", t)
+            # if t % 100 == 0:
+            #     print("timestep: " + str(t) + "/" + str(num_points))
             self.a_return = np.sqrt(self.h) * np.random.randn(batch_size,1)
             r_t = self.mu + self.a_return
             prices[:, t+1:t+2] = prices[:, t:t+1]*np.exp(r_t)
@@ -132,28 +134,8 @@ class GARCH():
         
         return prices
 
-stock = "^GSPC"
-
-model = GARCH(stock=stock, start="1986-12-31", end="2010-04-01", type="gjr")
-
-# """Training"""
-# params = model.train(save_params=True)
-
-# plt.figure(figsize=(12,6))
-# plt.plot(model.nll_losses)
-# plt.xlabel("Function Evaluations")
-# plt.ylabel("Negative Log Likelihood")
-# plt.savefig("garch_nll_losses.png")
-# plt.close()
-
-"""Generating"""
-x = model.generate(S_0=100, batch_size=2**1, num_points=252*5, load_params=True)
-# print("model_parameters: ", model.params)
-print(x.shape)
-plt.figure(figsize=(12,6))
-plt.plot(x[0].T)
-plt.xlabel("Timesteps")
-plt.ylabel("Prices")
-plt.legend([stock])
-plt.savefig("garch_test.png")
-plt.close()
+    def print_params(self):
+        if self.type == "gjr":
+            print("alpha_0: " + str(self.params[0]) + ", alpha: " + str(self.params[1]) + ", beta: " + str(self.params[2]) + ", gamma: " + str(self.params[3]))
+        else:
+            print("alpha_0: " + str(self.params[0]) + ", alpha: " + str(self.params[1]) + ", beta: " + str(self.params[2]))

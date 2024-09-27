@@ -25,7 +25,7 @@ class DCC_GARCH():
         R_t:        n x n, conditional correlation matrix of a_t at time t.
         z_t:        n x 1 vector of iid errors such that E[z_t] = 0 and E[z_t z_t^T] = I.
     """
-    def __init__(self, stocks, start="2000-01-01", end="2024-08-20", type="vanilla"):
+    def __init__(self, stocks, start="2000-01-01", end="2024-08-20", interval="1d", type="vanilla"):
         """
             Args:
             stocks: string of stocks tickers to be used to download the yfinance data
@@ -33,7 +33,8 @@ class DCC_GARCH():
             end:    "YYYY-MM-DD" used by yfinance as the end date to download stock data
             type:   "vanilla" or "gjr"
         """
-        market_data = yf.download(stocks, start=start, end=end, interval="1d")
+        self.stocks = stocks
+        market_data = yf.download(stocks, start=start, end=end, interval=interval)
         log_returns = np.log(market_data['Close'] / market_data['Close'].shift(1)).dropna()
         self.data = log_returns.to_numpy().T                                        #(N, T) Dataset of log returns
         
@@ -66,7 +67,7 @@ class DCC_GARCH():
         
         if self.type == "gjr":
             def constraint_alpha_beta_gamma(x):
-                """GARCH constraint alpha_n + beta_n < 1"""
+                """GARCH constraint alpha_n + beta_n + gamma_n/2 < 1"""
                 return 1.0 - x[self.N:2*self.N] - x[2*self.N:3*self.N] - x[3*self.N:4*self.N]/2.0
             
             self.garch_constraints = [{'type':'ineq', 'fun':constraint_alpha_beta_gamma}]
@@ -242,17 +243,19 @@ class DCC_GARCH():
         """Function used to train the individual asset GARCH parameters and the paramters a, b of correlation matrix R of DCC-GARCH"""
         parameters = []
 
-        for i in range(len(list(stocks.split(" ")))):
+        for i, stock in enumerate(list(stocks.split(" "))):
             log_returns_i = self.data[i]
             garch_model = GARCH.GARCH(dcc=True, data=log_returns_i, type=self.type)
+            print("TRAINING " + stock)
             params_i = garch_model.train()
             parameters.append(params_i)
 
         parameters = np.array(parameters)
-        parameters = np.concatenate((parameters.T.flatten(), np.zeros(2)+0.2))
-
+        parameters = np.concatenate((parameters.T.flatten(), np.zeros(2)+0.1))
+        
         self.params = parameters
         dcc_params = self.params[-2:]
+        print("TRAINING CORRELATION MATRIX R")
         dcc_results = minimize(fun=self.dcc_neg_log_likelihood, x0=dcc_params, method="trust-constr",
                            options={'verbose': 3, 'maxiter': 2000, 'xtol': 1e-8}, constraints=self.dcc_constraints, bounds=self.dcc_bounds)
         self.params[-2:] = dcc_results.x
@@ -275,52 +278,21 @@ class DCC_GARCH():
         self.Q = np.tile(self.Q_bar,(batch_size,1,1))
 
         for t in range(num_points):
-            print("timesteps: ", t)
+            # if t % 100 == 0:
+            #     print("timestep: " + str(t) + "/" + str(num_points))
             r_t = self.r_t(batch_size)
             prices[:, :, t+1:t+2] = prices[:, :, t:t+1]*np.exp(r_t)
             self.D_t_batch(params=self.params, batch_size=batch_size)
             self.R_t_batch(params=self.params, batch_size=batch_size)
         return prices
-
-"""
-^GDAXI: DAX (Germany)
-^IXIC: NASDAQ
-^GSPC: S AND P 500
-^DJI: Dow Jones Industrial Average
-^RUT: Russell 2000
-^N225: Nikkei 225 (Japan)
-^HSI: Hang Seng Index (Hong Kong)
-^NYA: NYSE Composite
-^FCHI: CAC 40 (France)
-MCD: McDonald's
-AAPL: Apple
-"""
-
-stocks = "^GDAXI ^IXIC ^GSPC ^DJI ^RUT ^N225 ^HSI ^NYA ^FCHI"
-# stocks = "AAPL ^GSPC"
-garch_type = "gjr"
-
-dcc_garch_model = DCC_GARCH(stocks=stocks, type=garch_type)
-
-# """Training"""
-# params = dcc_garch_model.train_R(save_params=True)
-# print(params)
-
-# plt.figure(figsize=(12,6))
-# plt.plot(dcc_garch_model.nll_losses)
-# plt.xlabel("Function Evaluations")
-# plt.ylabel("Negative Log Likelihood")
-# plt.savefig("dcc_nll_losses.png")
-# plt.close()
-
-"""Generating"""
-num_points=252*5
-
-plt.figure(figsize=(12,6))
-x = dcc_garch_model.generate(S_0=100, batch_size=2**2, num_points=252*5, load_params=True)
-plt.plot(x[0].T)
-plt.xlabel("Timesteps")
-plt.ylabel("Prices")
-plt.legend(list(stocks.split(" ")))
-plt.savefig("dcc_garch_test.png")
-plt.close()
+    
+    def print_params(self):
+        if self.type == "gjr":
+            for i, ticker in enumerate(list(self.stocks.split(" "))):
+                print("Asset " + str(i+1) + ": " + ticker)
+                print("alpha_0: " + str(self.params[i]) + ", alpha: " + str(self.params[i+self.N]) + ", beta: " + str(self.params[i+self.N*2]) + ", gamma: " + str(self.params[i+self.N*3]))
+        else:
+            for i, ticker in enumerate(list(self.stocks.split(" "))):
+                print("Asset " + str(i+1) + ": " + ticker)
+                print("alpha_0: " + str(self.params[i]) + ", alpha: " + str(self.params[i+self.N]) + ", beta: " + str(self.params[i+self.N*2]))
+        print("a: " + str(self.params[-2]) + ", b: " + str(self.params[-1]))
