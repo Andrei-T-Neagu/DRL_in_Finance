@@ -29,17 +29,20 @@ AAPL: Apple
 
 # stocks = "^GDAXI ^IXIC ^GSPC ^DJI ^RUT ^N225 ^HSI ^NYA ^FCHI"
 stocks = "^IXIC ^GSPC"
-garch_type = "vanilla"
+
+garch_type = "gjr"
 start="2000-10-24"
 end="2024-09-24"
 interval="1d"
 
 dcc_garch_model = DCC_GARCH(stocks=stocks, start=start, end=end, interval=interval, type=garch_type)
 
+sorted_stocks_list = sorted(list(stocks.split(" ")))
 """Training"""
 params = dcc_garch_model.train_R(save_params=True)
 plt.figure(figsize=(12,6))
-plt.plot(dcc_garch_model.nll_losses)
+nll_losses = np.array(dcc_garch_model.nll_losses)
+plt.plot(nll_losses[nll_losses <= nll_losses[0]])
 plt.xlabel("Function Evaluations")
 plt.ylabel("Negative Log Likelihood")
 plt.savefig("dcc_nll_losses.png")
@@ -53,14 +56,14 @@ x = dcc_garch_model.generate(S_0=100, batch_size=2**2, num_points=252*5, load_pa
 plt.plot(x[0].T)
 plt.xlabel("Timesteps")
 plt.ylabel("Prices")
-plt.legend(list(stocks.split(" ")))
+plt.legend(sorted_stocks_list)
 plt.savefig("dcc_garch_test.png")
 plt.close()
 
 """Comparison of parameters with mgarch library"""
 market_data = yf.download(stocks, start=start, end=end, interval=interval)
 log_returns = np.log(market_data['Close'] / market_data['Close'].shift(1)).dropna()
-data = log_returns.to_numpy()                                        #(T, N) Dataset of log returns
+data = log_returns.to_numpy()*100                                        #(T, N) Dataset of log returns
 
 model = mgarch()
 result = model.fit(data)
@@ -78,91 +81,37 @@ rugarch = importr('rugarch')
 rmgarch = importr('rmgarch')
 
 if garch_type == "gjr":
-    r_code = """
-    library(rugarch)
-    library(rmgarch)
+    model_type = "gjrGARCH"
+elif garch_type == "e":
+    model_type = "eGARCH"
+elif garch_type == "vanilla":
+    model_type = "sGARCH"               # Vanilla GARCH
 
-    # Step 1: Define univariate GJR-GARCH models for each asset using ugarchspec
-    gjr_spec1 <- ugarchspec(variance.model = list(model = "gjrGARCH", garchOrder = c(1, 1)),
-                            mean.model = list(armaOrder = c(0, 0)))
+garch_spec_list = []
+for i in range(len(sorted_stocks_list)):
+    garch_spec_list.append(f'garch_spec{i} <- ugarchspec(variance.model = list(model = "{model_type}", garchOrder = c(1, 1)),'
+                           ' mean.model = list(armaOrder = c(0, 0)))')
 
-    gjr_spec2 <- ugarchspec(variance.model = list(model = "gjrGARCH", garchOrder = c(1, 1)),
-                            mean.model = list(armaOrder = c(0, 0)))
+garch_spec_str = ', '.join([f'garch_spec{i}' for i in range(len(sorted_stocks_list))])
 
-    # gjr_spec3 <- ugarchspec(variance.model = list(model = "gjrGARCH", garchOrder = c(1, 1)),
-    #                         mean.model = list(armaOrder = c(0, 0)))
-                            
-    # gjr_spec4 <- ugarchspec(variance.model = list(model = "gjrGARCH", garchOrder = c(1, 1)),
-    #                         mean.model = list(armaOrder = c(0, 0)))
-                            
-    # gjr_spec5 <- ugarchspec(variance.model = list(model = "gjrGARCH", garchOrder = c(1, 1)),
-    #                         mean.model = list(armaOrder = c(0, 0)))
-                            
-    # gjr_spec6 <- ugarchspec(variance.model = list(model = "gjrGARCH", garchOrder = c(1, 1)),
-    #                         mean.model = list(armaOrder = c(0, 0)))
-                            
-    # gjr_spec7 <- ugarchspec(variance.model = list(model = "gjrGARCH", garchOrder = c(1, 1)),
-    #                         mean.model = list(armaOrder = c(0, 0)))
+# Define the R code for specifying and fitting the GJR-GARCH model
+r_code = f"""
+library(rugarch)
+library(rmgarch)
 
-    # gjr_spec8 <- ugarchspec(variance.model = list(model = "gjrGARCH", garchOrder = c(1, 1)),
-    #                         mean.model = list(armaOrder = c(0, 0)))
+# Step 1: Define univariate GJR-GARCH models for each asset using ugarchspec
+{'\n'.join(garch_spec_list)}
+                        
+# Step 2: Combine them into a multispec object
+uspec <- multispec(list({garch_spec_str}))
 
-    # gjr_spec9 <- ugarchspec(variance.model = list(model = "gjrGARCH", garchOrder = c(1, 1)),
-    #                         mean.model = list(armaOrder = c(0, 0)))
-                            
-    # Step 2: Combine them into a multispec object
-    uspec <- multispec(list(gjr_spec1, gjr_spec2))
-    # uspec <- multispec(list(gjr_spec1, gjr_spec2, gjr_spec3, gjr_spec4, gjr_spec5, gjr_spec6, gjr_spec7, gjr_spec8, gjr_spec9))
+# Step 3: Define the DCC-GARCH model using dccspec
+dcc_spec <- dccspec(uspec = uspec, dccOrder = c(1, 1), distribution = "mvnorm")
 
-    # Step 3: Define the DCC-GARCH model using dccspec
-    dcc_spec <- dccspec(uspec = uspec, dccOrder = c(1, 1), distribution = "mvnorm")
+# Output the DCC specification object to Python
+dcc_spec
+"""
 
-    # Output the DCC specification object to Python
-    dcc_spec
-    """
-else:
-    r_code = """
-    library(rugarch)
-    library(rmgarch)
-
-    # Step 1: Define univariate GJR-GARCH models for each asset using ugarchspec
-    garch_spec1 <- ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1)),
-                            mean.model = list(armaOrder = c(0, 0)))
-
-    garch_spec2 <- ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1)),
-                            mean.model = list(armaOrder = c(0, 0)))
-
-    # garch_spec3 <- ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1)),
-    #                         mean.model = list(armaOrder = c(0, 0)))
-                            
-    # garch_spec4 <- ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1)),
-    #                         mean.model = list(armaOrder = c(0, 0)))
-                            
-    # garch_spec5 <- ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1)),
-    #                         mean.model = list(armaOrder = c(0, 0)))
-                            
-    # garch_spec6 <- ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1)),
-    #                         mean.model = list(armaOrder = c(0, 0)))
-                            
-    # garch_spec7 <- ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1)),
-    #                         mean.model = list(armaOrder = c(0, 0)))
-
-    # garch_spec8 <- ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1)),
-    #                         mean.model = list(armaOrder = c(0, 0)))
-
-    # garch_spec9 <- ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1)),
-    #                         mean.model = list(armaOrder = c(0, 0)))
-                            
-    # Step 2: Combine them into a multispec object
-    uspec <- multispec(list(garch_spec1, garch_spec2))
-    # uspec <- multispec(list(garch_spec1, garch_spec2, garch_spec3, garch_spec4, garch_spec5, garch_spec6, garch_spec7, garch_spec8, garch_spec9))
-
-    # Step 3: Define the DCC-GARCH model using dccspec
-    dcc_spec <- dccspec(uspec = uspec, dccOrder = c(1, 1), distribution = "mvnorm")
-
-    # Output the DCC specification object to Python
-    dcc_spec
-    """
 # Execute the R code from Python
 dcc_spec = robjects.r(r_code)
 

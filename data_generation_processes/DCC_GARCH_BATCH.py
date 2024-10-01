@@ -33,11 +33,10 @@ class DCC_GARCH():
             end:    "YYYY-MM-DD" used by yfinance as the end date to download stock data
             type:   "vanilla" or "gjr"
         """
-        self.stocks = stocks
         market_data = yf.download(stocks, start=start, end=end, interval=interval)
         log_returns = np.log(market_data['Close'] / market_data['Close'].shift(1)).dropna()
-        self.data = log_returns.to_numpy().T                                        #(N, T) Dataset of log returns
-        
+        self.data = log_returns.to_numpy().T*100                                    #(N, T) Dataset of log returns
+        self.stocks = sorted(list(stocks.split(" ")))                               # List of the stock names
         self.type = type                                                            # GARCH type
         self.N = self.data.shape[0]                                                 # Number of assets
         self.T = self.data.shape[1]                                                 # Number of time steps                                                                                    
@@ -53,11 +52,11 @@ class DCC_GARCH():
         self.e = np.linalg.inv(self.D)@self.a_return                                #(N, 1) generated e_t
         self.e_data = np.linalg.inv(self.D)@self.a_data                             #(N, T) e_t from data
         self.Q_bar = self.e_data@self.e_data.T/self.T                               #(N, N) Q_bar using e_data                                          
-        self.num_params_garch = 4 if self.type == "gjr" else 3
-        if type == "gjr":
-            self.params = np.concatenate((np.var(self.a_data, axis=1), np.zeros(self.N*2)+0.2, np.zeros(self.N)+0.1, np.zeros(2)+0.2))      # parameters [N*alpha0, N*alpha, N*beta, N*gamma, a, b]
+        self.num_params_garch = 4 if self.type == "gjr" or self.type == "e" else 3
+        if self.type == "gjr" or self.type == "e":
+            self.params = np.concatenate((np.var(self.a_data, axis=1), np.zeros(self.N*2)+0.2, np.zeros(self.N)+0.1, np.zeros(1)+0.04, np.zeros(1)+0.95))      # parameters [N*alpha0, N*alpha, N*beta, N*gamma, a, b]
         else:
-            self.params = np.concatenate((np.var(self.a_data, axis=1), np.zeros(self.N*2)+0.2, np.zeros(2)+0.2))                            # parameters [N*alpha0, N*alpha, N*beta, a, b]
+            self.params = np.concatenate((np.var(self.a_data, axis=1), np.zeros(self.N*2)+0.2, np.zeros(1)+0.04, np.zeros(1)+0.95))                            # parameters [N*alpha0, N*alpha, N*beta, a, b]
         
         self.nll_losses = []                                                        # negative log likelihood array used to store training losses
         
@@ -71,18 +70,30 @@ class DCC_GARCH():
                 return 1.0 - x[self.N:2*self.N] - x[2*self.N:3*self.N] - x[3*self.N:4*self.N]/2.0
             
             self.garch_constraints = [{'type':'ineq', 'fun':constraint_alpha_beta_gamma}]
-        else:
+
+            self.garch_bounds = Bounds([np.finfo(float).eps for i in range(self.N*self.num_params_garch)],      # Bounds (0,inf) for alpha_0, alpha, beta, gamma(if gjr)
+                             [np.inf for i in range(self.N*self.num_params_garch)], 
+                             keep_feasible=[True for i in range(self.N*self.num_params_garch)])
+            
+        elif self.type == "vanilla":
             def constraint_alpha_beta(x):
                 """GARCH constraint alpha_n + beta_n < 1"""
                 return 1.0 - x[self.N:2*self.N] - x[2*self.N:3*self.N]
             
             self.garch_constraints = [{'type':'ineq', 'fun':constraint_alpha_beta}]
-        
-        self.dcc_constraints = [{'type':'ineq', 'fun':constraint_ab}]
-
-        self.garch_bounds = Bounds([np.finfo(float).eps for i in range(self.N*self.num_params_garch)],      # Bounds (0,inf) for alpha_0, alpha, beta, gamma(if gjr)
+            
+            self.garch_bounds = Bounds([np.finfo(float).eps for i in range(self.N*self.num_params_garch)],      # Bounds (0,inf) for alpha_0, alpha, beta, gamma(if gjr)
                              [np.inf for i in range(self.N*self.num_params_garch)], 
                              keep_feasible=[True for i in range(self.N*self.num_params_garch)])
+        
+        elif self.type == "e":
+            self.garch_constraints = None
+            # self.garch_bounds = None
+            self.garch_bounds = Bounds([-1.0 for i in range(self.N*self.num_params_garch)],      # Bounds (0,inf) for alpha_0, alpha, beta, gamma(if gjr)
+                             [1.0 for i in range(self.N*self.num_params_garch)], 
+                             keep_feasible=[True for i in range(self.N*self.num_params_garch)])
+
+        self.dcc_constraints = [{'type':'ineq', 'fun':constraint_ab}]
 
         self.dcc_bounds = Bounds([np.finfo(float).eps for i in range(2)],                                   # Bounds (0,inf) for a, b 
                              [np.inf for i in range(2)], 
@@ -92,17 +103,30 @@ class DCC_GARCH():
         """
             h_{n,t} = alpha0_{n} + alpha_{n} a_{n, t-1}^2 + beta_{n} h_{n, t-1}
         """
-        alpha0 = np.expand_dims(params[0:self.N],axis=1)
+        alpha_0 = np.expand_dims(params[0:self.N],axis=1)
         alpha = np.expand_dims(params[self.N:2*self.N],axis=1)
         beta = np.expand_dims(params[2*self.N:3*self.N], axis=1)
-        if self.type == "gjr":
+        if self.type == "e":
+            gamma = np.expand_dims(params[3*self.N:4*self.N], axis=1)
+            h_vector = np.expand_dims(np.diag(self.D)**2, axis=1)
+            new_h_vector = np.exp(alpha_0 + alpha * (np.absolute(np.linalg.inv(self.H_factor)@self.a_return) - np.sqrt(2.0/np.pi)) + gamma * (np.linalg.inv(self.H_factor)@self.a_return) + beta * np.log(h_vector))
+            # print("alpha_0: " + str(alpha_0) + ", alpha: " + str(alpha) + ", beta: " + str(beta) + ", gamma: " + str(gamma))
+            # print(alpha_0 + alpha * (np.absolute(np.linalg.inv(self.H_factor)@self.a_return) - np.sqrt(2.0/np.pi)) + gamma * (np.linalg.inv(self.H_factor)@self.a_return) + beta * np.log(h_vector))
+            # print("new_h_vector: ", new_h_vector)
+            self.D = np.diag(np.sqrt(new_h_vector.flatten()))
+            # print("self.D: ", self.D)
+        elif self.type == "gjr":
             gamma = np.expand_dims(params[3*self.N:4*self.N], axis=1)
             I = np.where(self.a_return > 0, 0.0, 1.0)
             alpha = alpha + gamma*I
-
-        h_vector = np.expand_dims(np.diag(self.D)**2, axis=1)
-        new_h_vector = alpha0 + alpha * self.a_return**2 + beta * h_vector
-        self.D = np.diag(np.sqrt(new_h_vector.flatten()))
+            h_vector = np.expand_dims(np.diag(self.D)**2, axis=1)
+            new_h_vector = alpha_0 + alpha * self.a_return**2 + beta * h_vector
+            self.D = np.diag(np.sqrt(new_h_vector.flatten()))
+            
+        elif self.type == "vanilla":
+            h_vector = np.expand_dims(np.diag(self.D)**2, axis=1)
+            new_h_vector = alpha_0 + alpha * self.a_return**2 + beta * h_vector
+            self.D = np.diag(np.sqrt(new_h_vector.flatten()))
         
         return self.D
     
@@ -111,20 +135,35 @@ class DCC_GARCH():
         """
             h_{n,t} = alpha0_{n} + alpha_{n} a_{n, t-1}^2 + beta_{n} h_{n, t-1}
         """
-        alpha0 = np.expand_dims(params[0:self.N],axis=1)
+        alpha_0 = np.expand_dims(params[0:self.N],axis=1)
         alpha = np.expand_dims(params[self.N:2*self.N],axis=1)
         beta = np.expand_dims(params[2*self.N:3*self.N], axis=1)
+        mydiag=np.vectorize(np.diag, signature='(n)->(n,n)')
+        
+        if self.type == "vanilla":
+            h_vector = np.expand_dims(np.diagonal(self.D, axis1=-2, axis2=-1)**2, axis=2)
+            new_h_vector = alpha_0 + alpha * self.a_return**2 + beta * h_vector
+            new_h_vector = np.reshape(new_h_vector, (batch_size, self.N))
+        
         if self.type == "gjr":
             gamma = np.expand_dims(params[3*self.N:4*self.N], axis=1)
             I = np.where(self.a_return > 0, 0.0, 1.0)
             alpha = alpha + gamma*I
 
-        h_vector = np.expand_dims(np.diagonal(self.D, axis1=-2, axis2=-1)**2, axis=2)
-        new_h_vector = alpha0 + alpha * self.a_return**2 + beta * h_vector
-        new_h_vector = np.reshape(new_h_vector, (batch_size, self.N))
-        mydiag=np.vectorize(np.diag, signature='(n)->(n,n)')
+            h_vector = np.expand_dims(np.diagonal(self.D, axis1=-2, axis2=-1)**2, axis=2)
+            new_h_vector = alpha_0 + alpha * self.a_return**2 + beta * h_vector
+            new_h_vector = np.reshape(new_h_vector, (batch_size, self.N))
+
+        elif self.type == "e":
+            gamma = np.expand_dims(params[3*self.N:4*self.N], axis=1)
+            I = np.where(self.a_return > 0, 0.0, 1.0)
+            alpha = alpha + gamma*I
+
+            h_vector = np.expand_dims(np.diagonal(self.D, axis1=-2, axis2=-1)**2, axis=2)
+            new_h_vector = np.exp(alpha_0 + alpha * (np.absolute(np.linalg.inv(self.H_factor)@self.a_return) - np.sqrt(2.0/np.pi)) + gamma * (np.linalg.inv(self.H_factor)@self.a_return) + beta * np.log(h_vector))
+            new_h_vector = np.reshape(new_h_vector, (batch_size, self.N))
+
         self.D = mydiag(np.sqrt(new_h_vector))
-        
         return self.D
     
     def R_t(self, params, t=0, train=False):
@@ -224,13 +263,14 @@ class DCC_GARCH():
     def train(self, save_params = False):
         """Training loop"""
         garch_params = self.params[0:-2]
-        garch_results = minimize(fun=self.garch_neg_log_likelihood, x0=garch_params, method="trust-constr",
-                           options={'verbose': 3, 'maxiter': 2000, 'xtol': 1e-4}, constraints=self.garch_constraints, bounds=self.garch_bounds)
+
+        garch_results = minimize(fun=self.garch_neg_log_likelihood, x0=garch_params, method="slsqp",
+                           options={'disp': True, 'maxiter': 2000}, constraints=self.garch_constraints, bounds=self.garch_bounds)
         self.params[0:-2] = garch_results.x
         
         dcc_params = self.params[-2:]
-        dcc_results = minimize(fun=self.dcc_neg_log_likelihood, x0=dcc_params, method="trust-constr",
-                           options={'verbose': 3, 'maxiter': 2000, 'xtol': 1e-8}, constraints=self.dcc_constraints, bounds=self.dcc_bounds)
+        dcc_results = minimize(fun=self.dcc_neg_log_likelihood, x0=dcc_params, method="slsqp",
+                           options={'disp': True, 'maxiter': 2000}, constraints=self.dcc_constraints, bounds=self.dcc_bounds)
         self.params[-2:] = dcc_results.x
         
         if save_params:
@@ -242,8 +282,8 @@ class DCC_GARCH():
     def train_R(self, save_params=False):
         """Function used to train the individual asset GARCH parameters and the paramters a, b of correlation matrix R of DCC-GARCH"""
         parameters = []
-
-        for i, stock in enumerate(list(stocks.split(" "))):
+        
+        for i, stock in enumerate(self.stocks):
             log_returns_i = self.data[i]
             garch_model = GARCH.GARCH(dcc=True, data=log_returns_i, type=self.type)
             print("TRAINING " + stock)
@@ -256,8 +296,8 @@ class DCC_GARCH():
         self.params = parameters
         dcc_params = self.params[-2:]
         print("TRAINING CORRELATION MATRIX R")
-        dcc_results = minimize(fun=self.dcc_neg_log_likelihood, x0=dcc_params, method="trust-constr",
-                           options={'verbose': 3, 'maxiter': 2000, 'xtol': 1e-8}, constraints=self.dcc_constraints, bounds=self.dcc_bounds)
+        dcc_results = minimize(fun=self.dcc_neg_log_likelihood, x0=dcc_params, method="slsqp",
+                           options={'disp': True, 'maxiter': 2000}, constraints=self.dcc_constraints, bounds=self.dcc_bounds)
         self.params[-2:] = dcc_results.x
 
         if save_params:
@@ -281,18 +321,19 @@ class DCC_GARCH():
             # if t % 100 == 0:
             #     print("timestep: " + str(t) + "/" + str(num_points))
             r_t = self.r_t(batch_size)
-            prices[:, :, t+1:t+2] = prices[:, :, t:t+1]*np.exp(r_t)
+            prices[:, :, t+1:t+2] = prices[:, :, t:t+1]*np.exp(r_t/100)
             self.D_t_batch(params=self.params, batch_size=batch_size)
             self.R_t_batch(params=self.params, batch_size=batch_size)
         return prices
     
     def print_params(self):
-        if self.type == "gjr":
-            for i, ticker in enumerate(list(self.stocks.split(" "))):
+        """Function used to print the parameters of the model"""
+        if self.type == "gjr" or self.type == "e":
+            for i, ticker in enumerate(self.stocks):
                 print("Asset " + str(i+1) + ": " + ticker)
                 print("alpha_0: " + str(self.params[i]) + ", alpha: " + str(self.params[i+self.N]) + ", beta: " + str(self.params[i+self.N*2]) + ", gamma: " + str(self.params[i+self.N*3]))
         else:
-            for i, ticker in enumerate(list(self.stocks.split(" "))):
+            for i, ticker in enumerate(self.stocks):
                 print("Asset " + str(i+1) + ": " + ticker)
                 print("alpha_0: " + str(self.params[i]) + ", alpha: " + str(self.params[i+self.N]) + ", beta: " + str(self.params[i+self.N*2]))
         print("a: " + str(self.params[-2]) + ", b: " + str(self.params[-1]))
