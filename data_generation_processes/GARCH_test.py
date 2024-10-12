@@ -13,8 +13,8 @@ from GARCH import GARCH
 
 stock = "^GSPC"
 garch_type = "vanilla"
-start="2000-10-24" 
-end="2024-09-24"
+start="1986-12-31" 
+end="2010-04-01"
 interval="1d"
 
 model = GARCH(stock=stock, start=start, end=end, interval=interval, type=garch_type)
@@ -51,6 +51,12 @@ plt.close()
 """Comparison of parameters with arch library"""
 market_data = yf.download(stock, start=start, end=end, interval=interval)
 log_returns = np.log(market_data['Close'] / market_data['Close'].shift(1)).dropna()
+
+mu = log_returns.mean() * 252
+sigma = log_returns.std() * np.sqrt(252)
+print(f"Estimated Annualized Mu (drift) from data: {mu}")
+print(f"Estimated Annulaized Sigma (volatility) from data: {sigma}")
+
 data = log_returns.to_numpy()*100
 if garch_type == "vanilla":
     model1 = arch_model(data.T, vol='Garch', p=1, q=1)

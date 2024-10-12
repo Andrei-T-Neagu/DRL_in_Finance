@@ -102,7 +102,7 @@ def print_stats(hedging_err, deltas, loss_type, model_name, V_0, riskaversion=99
 
             # Show additional results
     print('Model was trained with the loss function: %s' % (loss_type))
-    print('Initial investment', V_0)
+    print('Initial investment:', V_0)
     print('Mean Hedging error:', mean_hedging_err)
     print('CVaR_95: %.4f, CVaR_99: %.4f' % (CVaR_95, CVaR_99))
     print('VaR_95: %.4f, VaR_99: %.4f' % (VaR_95, VaR_99))

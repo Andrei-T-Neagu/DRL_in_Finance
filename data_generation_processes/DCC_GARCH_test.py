@@ -28,7 +28,7 @@ AAPL: Apple
 """
 
 # stocks = "^GDAXI ^IXIC ^GSPC ^DJI ^RUT ^N225 ^HSI ^NYA ^FCHI"
-stocks = "^IXIC ^GSPC"
+stocks = "^IXIC ^GSPC ^DJI"
 
 garch_type = "gjr"
 start="2000-10-24"
@@ -52,7 +52,12 @@ plt.close()
 num_points=252*5
 
 plt.figure(figsize=(12,6))
-x = dcc_garch_model.generate(S_0=100, batch_size=2**2, num_points=252*5, load_params=True)
+x = dcc_garch_model.generate(S_0=100, batch_size=2**1, num_points=252*100, load_params=True)
+log_returns = np.log(x/np.roll(x,1,axis=2))[0,:,1:]*100
+a = log_returns - np.mean(log_returns, axis=1, keepdims=True)
+R = np.corrcoef(a)
+print("Correlation matrix from generated data:\n", R)
+print("Correlation matrix from real data:\n", np.corrcoef(dcc_garch_model.a_data))
 plt.plot(x[0].T)
 plt.xlabel("Timesteps")
 plt.ylabel("Prices")

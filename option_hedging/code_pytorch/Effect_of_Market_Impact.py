@@ -8,10 +8,10 @@ import torch.nn.functional as F
 import matplotlib
 import matplotlib.pyplot as plt
 import Utils_general
-import DeepAgent as DeepAgent
-import DeepAgentTransformer
-import DeepAgentLSTM as DeepAgentLSTM
-import DeepAgentGRU as DeepAgentGRU
+import option_hedging.code_pytorch.DeepHedgingEnvironment as DeepHedgingEnvironment
+import option_hedging.code_pytorch.old_models.DeepAgentTransformer as DeepAgentTransformer
+import option_hedging.code_pytorch.old_models.DeepAgentLSTM as DeepAgentLSTM
+import option_hedging.code_pytorch.old_models.DeepAgentGRU as DeepAgentGRU
 from scipy.stats import ttest_ind
 
 T = 252/252
@@ -78,7 +78,7 @@ for loss in loss_types:
         beta = 1.0-impact
 
         name = "code_pytorch/effect_of_market_impact/{time_period}/{loss_type}_hedging_{impact}_market_impact".format(time_period=time_period, loss_type="quadratic" if loss_type=="RMSE" else "semi_quadratic", impact="no" if alpha==1.0 and beta==1.0 else "with")
-        agent = DeepAgent.DeepAgent(nbs_point_traj, batch_size, r_borrow, r_lend, stock_dyn, params_vect, S_0, T, alpha, beta,
+        agent = DeepHedgingEnvironment.Deep(nbs_point_traj, batch_size, r_borrow, r_lend, stock_dyn, params_vect, S_0, T, alpha, beta,
                         loss_type, option_type, position_type, strike, V_0, nbs_layers, nbs_units, lr, dropout, prepro_stock,
                         nbs_shares, lambdas, name=name)
 

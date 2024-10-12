@@ -6,14 +6,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import Utils_general
-import DeepAgent
-import DeepAgentTransformer
-import DeepAgentLSTM
-import DeepAgentGRU
-import DeepAgentLight
-import DeepAgentTransformerLight
-import DeepAgentLSTMLight
-import DeepAgentGRULight
+import option_hedging.code_pytorch.DeepHedgingEnvironment as DeepHedgingEnvironment
+import option_hedging.code_pytorch.old_models.DeepAgentTransformer as DeepAgentTransformer
+import option_hedging.code_pytorch.old_models.DeepAgentLSTM as DeepAgentLSTM
+import option_hedging.code_pytorch.old_models.DeepAgentGRU as DeepAgentGRU
+import option_hedging.code_pytorch.old_models.DeepAgentLight as DeepAgentLight
+import option_hedging.code_pytorch.old_models.DeepAgentTransformerLight as DeepAgentTransformerLight
+import option_hedging.code_pytorch.old_models.DeepAgentLSTMLight as DeepAgentLSTMLight
+import option_hedging.code_pytorch.old_models.DeepAgentGRULight as DeepAgentGRULight
 from scipy.stats import wilcoxon
 from scipy.stats import ttest_ind
 
@@ -165,7 +165,7 @@ agent_light = DeepAgentLight.DeepAgent(nbs_point_traj, batch_size, r_borrow, r_l
                 loss_type, option_type, position_type, strike, V_0, nbs_layers, nbs_units, lr, dropout, prepro_stock,
                 nbs_shares, lambdas, name=name_ffnn)
 
-agent = DeepAgent.DeepAgent(nbs_point_traj, batch_size, r_borrow, r_lend, stock_dyn, params_vect, S_0, T, alpha, beta,
+agent = DeepHedgingEnvironment.DeepAgent(nbs_point_traj, batch_size, r_borrow, r_lend, stock_dyn, params_vect, S_0, T, alpha, beta,
                 loss_type, option_type, position_type, strike, V_0, nbs_layers, nbs_units, lr, dropout, prepro_stock,
                 nbs_shares, lambdas, name=name_ffnn)
 
