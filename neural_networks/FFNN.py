@@ -3,7 +3,7 @@ import torch.nn as nn
 
 class FFNN(nn.Module):
     
-    def __init__(self, in_features, out_features, num_layers, hidden_size, dropout=0.5):
+    def __init__(self, in_features, out_features, num_layers, hidden_size, dropout=0.0):
         
         super().__init__()
         

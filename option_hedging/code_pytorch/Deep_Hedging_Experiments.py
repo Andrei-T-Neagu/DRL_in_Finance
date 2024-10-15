@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import Utils_general
 import DeepHedgingEnvironment
 import RL_algorithms.DQN as DQN
+import RL_algorithms.PG as PG
 from data_generation_processes.GARCH import GARCH
 from scipy.stats import ttest_ind
 from scipy.stats import f
@@ -21,8 +22,8 @@ alpha = 1.00
 beta = 1.00
 
 batch_size = 512
-train_size = 2**17
-test_size = 2**17
+train_size = 2**20
+test_size = 2**20
 epochs = 1
 r_borrow = 0
 r_lend = 0
@@ -97,9 +98,9 @@ def generate_garch_dataset(dataset_type="train_set", size=train_size):
     torch.save(dataset, global_path_prefix + str(dataset_type))
 
 """Training the garch model and generating the datasets"""
-train_garch()
-generate_garch_dataset(dataset_type="train_set", size=train_size)
-generate_garch_dataset(dataset_type="test_set", size=test_size)
+# train_garch()
+# generate_garch_dataset(dataset_type="train_set", size=train_size)
+# generate_garch_dataset(dataset_type="test_set", size=test_size)
 
 # Select the device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -190,15 +191,38 @@ batch_size = 64 | nbs_layers = 5 | nbs_units = 1024
 # rsmse_gru = np.sqrt(np.mean(semi_square_hedging_err_gru))
 
 # Initialize Deep Hedging environement
-deep_hedging_env = DeepHedgingEnvironment.DeepHedgingEnvironment("FFNN", nbs_point_traj, batch_size, r_borrow, r_lend, stock_dyn, params_vect, S_0, T, alpha, beta,
+deep_hedging_env = DeepHedgingEnvironment.DeepHedgingEnvironment("FFNN", nbs_point_traj, r_borrow, r_lend, stock_dyn, params_vect, S_0, T, alpha, beta,
             loss_type, option_type, position_type, strike, V_0, num_layers, nbs_units, lr, dropout, prepro_stock,
-            nbs_shares, lambdas, light, train_set=train_set, test_set=test_set, name=name_ffnn)
+            nbs_shares, lambdas, light, train_set=train_set, test_set=test_set, discretized= True, name=name_ffnn)
 
 # Train and test DQN model
-# all_losses_ffnn, ffnn_losses = agent_ffnn.train(train_set=train_set, train_size = train_size, epochs=epochs, lr_schedule=lr_schedule)
+
 dqn_agent = DQN.DoubleDQN(state_size=6, action_size=50, num_layers=num_layers, hidden_size=nbs_units, lr=lr, batch_size=batch_size)
-DQN.train_dqn(dqn_agent, deep_hedging_env)
-DQN.test_dqn(dqn_agent, deep_hedging_env)
+dqn_agent.train(deep_hedging_env, episodes= 500)
+dqn_actions, dqn_rewards = dqn_agent.test(deep_hedging_env)
+
+dqn_actions = dqn_actions.cpu().detach().numpy()
+dqn_rewards = dqn_rewards.cpu().detach().numpy()
+
+print(" ----------------- ")
+print(" DQN Results")
+print(" ----------------- ")
+Utils_general.print_stats(dqn_rewards, dqn_actions, "RSMSE", "DQN", V_0)
+
+# Train and test PG model
+
+# deep_hedging_env.discretized = False
+# pg_agent = PG.PG(state_size=6, action_size=1, num_layers=num_layers, hidden_size=nbs_units, lr=lr, batch_size=batch_size)
+# pg_agent.train(deep_hedging_env, episodes=3000)
+# pg_actions, pg_rewards = pg_agent.test(deep_hedging_env)
+
+# pg_actions = pg_actions.cpu().detach().numpy()
+# pg_rewards = pg_rewards.cpu().detach().numpy()
+
+# print(" ----------------- ")
+# print(" Policy Gradient Results")
+# print(" ----------------- ")
+# Utils_general.print_stats(pg_rewards, pg_actions, "RSMSE", "Policy Gradient", V_0)
 
 # agent_ffnn.model = torch.load(name_ffnn)
 # deltas_ffnn, hedging_err_ffnn, S_t_ffnn, V_t_ffnn, A_t_ffnn, B_t_ffnn = agent_ffnn.test(test_size=test_size, test_set=test_set)
@@ -236,8 +260,6 @@ print(" ----------------- ")
 print(" Delta Hedging Results")
 print(" ----------------- ")
 deltas_DH, hedging_err_DH = Utils_general.delta_hedge_res(test_set, r_borrow, r_lend, params_vect[1], T, alpha, beta, option_type=option_type, position_type=position_type, strike=strike, V_0=V_0, nbs_shares=nbs_shares, hab=lambdas)
-print("deltas_DH.shape: ", deltas_DH.shape)
-print("hedging_err_DH.shape: ", hedging_err_DH.shape)
 Utils_general.print_stats(hedging_err_DH, deltas_DH, "Delta hedge", "Delta hedge", V_0)
 semi_square_hedging_err_DH = np.square(np.where(hedging_err_DH > 0, hedging_err_DH, 0))
 smse_DH = np.mean(semi_square_hedging_err_DH)

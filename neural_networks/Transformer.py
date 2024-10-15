@@ -3,7 +3,7 @@ import torch.nn as nn
 
 class Transformer(nn.Module):
     
-    def __init__(self, in_features, seq_length, d_model, dim_feedforward, n_heads, num_layers, dropout=0.5):
+    def __init__(self, in_features, seq_length, d_model, dim_feedforward, n_heads, num_layers, dropout=0.0):
         
         super().__init__()
 

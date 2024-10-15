@@ -16,9 +16,9 @@ from neural_networks.Transformer import Transformer
 
 class DeepHedgingEnvironment():
     
-    def __init__(self, model_type, nbs_point_traj, batch_size, r_borrow, r_lend, stock_dyn, params_vect, S_0, T, alpha, beta,
+    def __init__(self, model_type, nbs_point_traj, r_borrow, r_lend, stock_dyn, params_vect, S_0, T, alpha, beta,
                  loss_type, option_type, position_type, strike, V_0, nbs_layers, nbs_units, lr, dropout, prepro_stock,
-                 nbs_shares, lambdas, light, train_set, test_set, name='model'):
+                 nbs_shares, lambdas, light, train_set, test_set, discretized = False, name='model'):
         
         self.model_type = model_type
         self.nbs_point_traj = nbs_point_traj
@@ -52,6 +52,7 @@ class DeepHedgingEnvironment():
         self.light = light
         
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.discretized = discretized                                                                      # For if the action space is discretized
         self.discretized_actions = torch.arange(start=-0.5, end=2.0, step=0.05, device=self.device)
 
         self.train_set = train_set
@@ -110,9 +111,9 @@ class DeepHedgingEnvironment():
         Returns:
         - self.input_t: torch.Tensor of size [self.batch_size, 6] or [self.batch_size, 3] depending on the number of features. Features (state) to be input into the neural network.
         """
-        self.t = 0                      # the time step in the path
-        self.done = False               # variable which determines if the path (episode) is done
-        self.batch_size = batch_size    # Set the batch size of the environment samples (size 1 if using replay memory buffer)
+        self.t = 0                                                                  # the time step in the path
+        self.batch_size = batch_size                                                # Set the batch size of the environment samples (size 1 if using replay memory buffer)
+        self.done = torch.zeros(self.batch_size, device=self.device)                # variable which determines if the path (episode) is done
 
         # Different models' features
         # if self.model_type == "LSTM" or self.model_type == "GRU":
@@ -190,7 +191,10 @@ class DeepHedgingEnvironment():
         #     self.delta_t_next = self.model(input_t_seq, input_t_seq_mask)
 
         # When actions are discretized
-        self.delta_t_next = self.discretized_actions[action]                            # torch.Tensor of size [self.batch_size]. Action to be taken at next time step     
+        if self.discretized:
+            self.delta_t_next = self.discretized_actions[action]                            # torch.Tensor of size [self.batch_size]. Action to be taken at next time step     
+        else:
+            self.delta_t_next = action.flatten()
         # Once the hedge is computed, update M_t (cash reserve)
         if self.t == 0:
             diff_delta_t = self.delta_t_next                                            # torch.Tensor of size [self.batch_size]. Difference in hedging position from last period
@@ -221,7 +225,7 @@ class DeepHedgingEnvironment():
 
         batch = self.dataset[self.path*self.batch_size:(self.path+1)*self.batch_size,:]     # torch.Tensor of size [self.batch_size, self.N] representing a batch of price paths
         self.S_t = batch[:,self.t+1].to(device=self.device)                                 # torch.Tensor of size [self.batch_size] representing a batch of prices at the next time step
-
+        
         # Liquidation portfolio value
         L_t = self.liquid_func(self.S_t, self.delta_t_next, self.A_t, self.B_t)     # torch.Tensor of size [self.batch_size]. Revenue from liquidating
         self.V_t = self.int_rate_bank(self.M_t) + L_t                               # torch.Tensor of size [self.batch_size]. Portfolio value.
@@ -243,7 +247,7 @@ class DeepHedgingEnvironment():
             self.done = torch.ones(self.batch_size)                             #   set done to be True
             self.path += 1                                                      #   iterate path index
             self.t = 0                                                          #   set time step to 0
-            if (self.path+1)*self.batch_size > self.dataset.shape[0]-1:        #   if path is the final path in the dataset
+            if (self.path)*self.batch_size > self.dataset.shape[0]-1:           #   if path is the final path in the dataset
                 self.path = 0                                                   #       reset path counter
             # Compute hedging error at maturity
             # Check if worth it to execute or not
@@ -279,8 +283,8 @@ class DeepHedgingEnvironment():
             # print("HEDGING ERROR SHAPE: ", self.hedging_error.shape)
             # print("HEDGING ERROR: ", self.hedging_error)
         else:
-            self.hedging_error = torch.zeros(self.batch_size)
-            self.done = torch.zeros(self.batch_size)
+            self.hedging_error = torch.zeros(self.batch_size, device=self.device)
+            self.done = torch.zeros(self.batch_size, device=self.device)
 
         # update delta_t
         self.delta_t = self.delta_t_next

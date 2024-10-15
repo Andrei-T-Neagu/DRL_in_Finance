@@ -3,7 +3,7 @@ import torch.nn as nn
 
 class LSTM_multilayer_cell(nn.Module):
     
-    def __init__(self, batch_size, input_size, hidden_size, num_layers, device, dropout=0.5):
+    def __init__(self, batch_size, input_size, hidden_size, num_layers, device, dropout=0.0):
         
         super().__init__()
 
