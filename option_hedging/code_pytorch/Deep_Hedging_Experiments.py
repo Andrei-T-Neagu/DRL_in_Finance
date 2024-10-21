@@ -1,5 +1,6 @@
 import datetime as datetime
 import math
+import random
 import numpy as np
 import torch
 import torch.nn as nn 
@@ -15,15 +16,15 @@ from scipy.stats import f
 import yfinance as yf
 global_path_prefix = "/home/a_eagu/DRL_in_Finance/option_hedging/code_pytorch/"
 
-nbs_point_traj = 253
+nbs_point_traj = 9
 time_period = "day"
-T = 252/252
+T = 1/252
 alpha = 1.00
 beta = 1.00
 
-batch_size = 512
+batch_size = 128
 train_size = 2**20
-test_size = 2**20
+test_size = 2**17
 epochs = 1
 r_borrow = 0
 r_lend = 0
@@ -35,9 +36,9 @@ option_type = "call"
 position_type = "short"
 strike = 100
 num_layers = 4
-nbs_units = 256
+nbs_units = 128
 num_heads = 8
-lr = 0.0001
+lr = 0.001
 dropout = 0
 prepro_stock = "log-moneyness"
 nbs_shares = 1
@@ -45,9 +46,13 @@ lambdas = [-1, -1]
 
 #real market data parameters for garch model
 stock = "^GSPC"
-start="1986-12-31"
-end="2010-04-01"
-interval= "1d"
+
+# start="1986-12-31"
+# end="2010-04-01"
+
+start="2022-11-15"
+end="2024-10-15"
+interval= "1h"
 garch_type="gjr"
 
 # neural network type parameters
@@ -92,15 +97,16 @@ def train_garch():
 
 # Generating the GARCH datasets
 def generate_garch_dataset(dataset_type="train_set", size=train_size):
+    print("Generating GARCH Data Set")
     dataset = garch_model.generate(S_0=S_0, batch_size=size, num_points=nbs_point_traj, load_params=True)
     dataset = torch.from_numpy(dataset).to(torch.float)
     
     torch.save(dataset, global_path_prefix + str(dataset_type))
 
 """Training the garch model and generating the datasets"""
-# train_garch()
-# generate_garch_dataset(dataset_type="train_set", size=train_size)
-# generate_garch_dataset(dataset_type="test_set", size=test_size)
+train_garch()
+generate_garch_dataset(dataset_type="train_set", size=train_size)
+generate_garch_dataset(dataset_type="test_set", size=test_size)
 
 # Select the device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -190,19 +196,89 @@ batch_size = 64 | nbs_layers = 5 | nbs_units = 1024
 # smse_gru = np.mean(semi_square_hedging_err_gru)
 # rsmse_gru = np.sqrt(np.mean(semi_square_hedging_err_gru))
 
+# For reproducibility
+torch.manual_seed(0)
+random.seed(0)
+np.random.seed(0)
+
 # Initialize Deep Hedging environement
 deep_hedging_env = DeepHedgingEnvironment.DeepHedgingEnvironment("FFNN", nbs_point_traj, r_borrow, r_lend, stock_dyn, params_vect, S_0, T, alpha, beta,
             loss_type, option_type, position_type, strike, V_0, num_layers, nbs_units, lr, dropout, prepro_stock,
             nbs_shares, lambdas, light, train_set=train_set, test_set=test_set, discretized= True, name=name_ffnn)
 
-# Train and test DQN model
+lr_list = [0.01, 0.001, 0.0001]
+num_layers_list = [4, 3, 2]
+nbs_units_list = [128, 64, 32]
+batch_size_list = [128, 64, 32]
+hyperparameter_path = "/home/a_eagu/DRL_in_Finance/dqn_hyperparameters/"
+configs = []
+rsmses = []
 
-dqn_agent = DQN.DoubleDQN(state_size=6, action_size=50, num_layers=num_layers, hidden_size=nbs_units, lr=lr, batch_size=batch_size)
-dqn_agent.train(deep_hedging_env, episodes= 500)
-dqn_actions, dqn_rewards = dqn_agent.test(deep_hedging_env)
+episodes = 30000
+ma_size = 100
 
-dqn_actions = dqn_actions.cpu().detach().numpy()
-dqn_rewards = dqn_rewards.cpu().detach().numpy()
+config_index = 0
+total_configs = len(lr_list) * len(num_layers_list) * len(nbs_units_list) * len(batch_size_list) 
+
+for lr in lr_list:
+    for num_layers in num_layers_list:
+        for nbs_units in nbs_units_list:
+            for batch_size in batch_size_list:
+
+                training_start = datetime.datetime.now()
+
+                config_index += 1
+                config_string = "config: " + str(config_index) + " | lr: " + str(lr) + " | num_layers: " + str(num_layers) + " | nbs_units: " + str(nbs_units) + " | batch_size: " + str(batch_size)
+                configs.append(config_string)
+                
+                print("CONFIGURATION: " + str(config_index) + "\\" + str(total_configs))
+
+                # For reproducibility
+                torch.manual_seed(0)
+                random.seed(0)
+                np.random.seed(0)
+
+                # Initialize Deep Hedging environement
+                deep_hedging_env = DeepHedgingEnvironment.DeepHedgingEnvironment("FFNN", nbs_point_traj, r_borrow, r_lend, stock_dyn, params_vect, S_0, T, alpha, beta,
+                            loss_type, option_type, position_type, strike, V_0, num_layers, nbs_units, lr, dropout, prepro_stock,
+                            nbs_shares, lambdas, light, train_set=train_set, test_set=test_set, discretized= True, name=name_ffnn)
+
+                # # Train and test DQN model
+
+                validation_deep_hedging_env = DeepHedgingEnvironment.DeepHedgingEnvironment("FFNN", nbs_point_traj, r_borrow, r_lend, stock_dyn, params_vect, S_0, T, alpha, beta,
+                            loss_type, option_type, position_type, strike, V_0, num_layers, nbs_units, lr, dropout, prepro_stock,
+                            nbs_shares, lambdas, light, train_set=train_set, test_set=test_set, discretized= True, name=name_ffnn)
+
+                action_size = deep_hedging_env.discretized_actions.shape[0]
+
+                dqn_agent = DQN.DoubleDQN(state_size=6, action_size=action_size, num_layers=num_layers, hidden_size=nbs_units, lr=lr, batch_size=batch_size)
+                dqn_train_losses = dqn_agent.train(deep_hedging_env, validation_deep_hedging_env, episodes=episodes, lr_schedule=True)
+                dqn_actions, dqn_rewards, dqn_rsmse = dqn_agent.test(deep_hedging_env)
+                
+                rsmses.append(dqn_rsmse)
+                
+                dqn_actions = dqn_actions.cpu().detach().numpy()
+                dqn_rewards = dqn_rewards.cpu().detach().numpy()
+
+                ma_dqn_losses = np.convolve(dqn_train_losses, np.ones(ma_size), 'valid') / ma_size
+                dqn_train_losses_fig = plt.figure(figsize=(12, 6))
+                plt.plot(ma_dqn_losses, label="RSMSE")
+                plt.xlabel("Episodes")
+                plt.ylabel("RSMSE")
+                plt.legend()
+                plt.title("RSMSE " + str(ma_size) + " Episode Moving Average for DQN with " + config_string)
+                plt.savefig(hyperparameter_path + "training_losses/dqn_train_losses_CONFIG_"+ str(config_index) + ".png")
+                plt.close()
+
+                training_end = datetime.datetime.now()
+                print("TIME TAKEN: " + str(training_end-training_start))
+
+sorted_valid_indices = np.argsort(rsmses).tolist()
+
+with open(hyperparameter_path + "dqn_hyperparameters_file.txt", "w") as hyperparameter_tune_file:
+    # Writing data to a file
+    for i in sorted_valid_indices:
+        hyperparameter_tune_file.write(configs[i] + " | rsmse: " + str(rsmses[i]) + "\n")
 
 print(" ----------------- ")
 print(" DQN Results")
@@ -213,8 +289,10 @@ Utils_general.print_stats(dqn_rewards, dqn_actions, "RSMSE", "DQN", V_0)
 
 # deep_hedging_env.discretized = False
 # pg_agent = PG.PG(state_size=6, action_size=1, num_layers=num_layers, hidden_size=nbs_units, lr=lr, batch_size=batch_size)
-# pg_agent.train(deep_hedging_env, episodes=3000)
-# pg_actions, pg_rewards = pg_agent.test(deep_hedging_env)
+# pg_agent.train(deep_hedging_env, episodes=10000)
+# pg_actions, pg_rewards, pg_rsmse = pg_agent.test(deep_hedging_env)
+
+# print("POLICY GRADIENT RSMSE: " + pg_rsmse)
 
 # pg_actions = pg_actions.cpu().detach().numpy()
 # pg_rewards = pg_rewards.cpu().detach().numpy()
@@ -223,6 +301,8 @@ Utils_general.print_stats(dqn_rewards, dqn_actions, "RSMSE", "DQN", V_0)
 # print(" Policy Gradient Results")
 # print(" ----------------- ")
 # Utils_general.print_stats(pg_rewards, pg_actions, "RSMSE", "Policy Gradient", V_0)
+
+
 
 # agent_ffnn.model = torch.load(name_ffnn)
 # deltas_ffnn, hedging_err_ffnn, S_t_ffnn, V_t_ffnn, A_t_ffnn, B_t_ffnn = agent_ffnn.test(test_size=test_size, test_set=test_set)

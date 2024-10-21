@@ -36,7 +36,7 @@ class PG:
         env.train()
         
         if lr_schedule:
-            self.scheduler = lr_scheduler.LinearLR(self.optimizer, start_factor=1.0, end_factor=0.1, total_iters=episodes)
+            self.scheduler = lr_scheduler.LinearLR(self.optimizer, start_factor=1.0, end_factor=0.0001, total_iters=episodes)
         
         print("TRAINING PG: ")
         for e in range(episodes):
@@ -61,10 +61,11 @@ class PG:
             
             if lr_schedule:
                 self.scheduler.step()
+            
+            if e % 100 == 0:
+                print(f"Episode {e}/{episodes-1}, Total Reward: {loss.item()}")
 
-            print(f"Episode {e+1}/{episodes}, Path: {env.path}, Total Reward: {loss.item()}")
-
-        self.save("pg_model.pth")
+        # self.save("pg_model.pth")
 
     def test(self, env):
         """
@@ -82,13 +83,13 @@ class PG:
         env.test()
         train_size = env.dataset.shape[0]
         num_points = env.N
-        episodes = int(train_size/self.batch_size)
+        batches = int(train_size/self.batch_size)
 
-        actions = torch.zeros(num_points, self.batch_size, episodes, device=self.device)
-        rewards = torch.zeros(self.batch_size, episodes, device=self.device)
+        actions = torch.zeros(num_points, self.batch_size, batches, device=self.device)
+        rewards = torch.zeros(self.batch_size, batches, device=self.device)
 
-        print("TESTING DQN: ")
-        for episode in range(episodes):
+        print("TESTING PG: ")
+        for batch in range(batches):
             state = env.reset(self.batch_size)  # Initialize the environment and get the initial state
             done = torch.zeros(self.batch_size)
             total_reward = torch.zeros(self.batch_size, device=self.device)
@@ -101,9 +102,9 @@ class PG:
                 # Step the environment with the chosen action
                 next_state, reward, done = env.step(action)
                 # Store action
-                actions[i,:,episode] = action.flatten()
+                actions[i,:,batch] = action.flatten()
                 # Store reward (hedging error)
-                rewards[:,episode] = reward
+                rewards[:,batch] = reward
                 # Accumulate the reward
                 total_reward += reward
                 # Move to the next state
@@ -112,6 +113,8 @@ class PG:
                 i += 1
             
             loss = torch.sqrt(torch.mean(torch.square(torch.where(total_reward > 0, total_reward, 0))))
-            print(f"Episode {episode+1}/{episodes}, Path: {env.path}, Total Reward: {loss.item()}")
-        print(torch.mean(actions.flatten(1), dim=1))
+            
+            if batch % 100 == 0:
+                print(f"Episode {batch}/{batches-1}, Total Reward: {loss.item()}")
+        
         return actions.flatten(1), rewards.flatten()

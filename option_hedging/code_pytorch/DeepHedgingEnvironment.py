@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(0,".")
 import datetime as dt
 import math
 import numpy as np
@@ -6,8 +8,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import Utils_general
-import sys
-sys.path.insert(0,".")
 import torch.optim.lr_scheduler as lr_scheduler
 from neural_networks.FFNN import FFNN
 from neural_networks.LSTM import LSTM_multilayer_cell
@@ -71,7 +71,7 @@ class DeepHedgingEnvironment():
         #     self.model = Transformer(in_features=6, seq_length=self.N, d_model=self.nbs_units, dim_feedforward=self.nbs_units, n_heads=self.num_heads, num_layers=self.nbs_layers, dropout=dropout).to(self.device)
         
         self.name = name
-        print("Initial value of the portfolio: ", V_0)
+        # print("Initial value of the portfolio: ", V_0)
 
     def train(self):
         """
