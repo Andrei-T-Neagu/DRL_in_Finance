@@ -28,11 +28,17 @@ class DoubleDQN:
         # Main and target networks
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = FFNN(in_features=state_size, out_features=action_size, num_layers=num_layers, hidden_size=hidden_size, dueling=True).to(self.device)
+        self.model.apply(self.init_weights)
         self.target_model = FFNN(in_features=state_size, out_features=action_size, num_layers=num_layers, hidden_size=hidden_size, dueling=True).to(self.device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
         self.tau = tau
         # Synchronize target model with main model
         self.target_model.load_state_dict(self.model.state_dict())
+
+    def init_weights(self, m):
+        if type(m) == nn.Linear:
+            torch.nn.init.xavier_normal_(m.weight)
+            m.bias.data.fill_(0)
 
     # Set the parameters of the target model to be the same as the main model
     def update_target_model(self):

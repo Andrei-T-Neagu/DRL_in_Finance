@@ -115,11 +115,11 @@ class GARCH():
                            options={'disp': True, 'maxiter': 1000}, constraints=self.constraints, bounds=self.bounds)
         self.params = results.x
         
-        if self.type == "vanilla":
-            print("GARCH estimated unconditional variance: ", self.params[0]/(1-self.params[1]-self.params[2]))
-        elif self.type == "gjr":
-            print("GJR-GARCH estimated unconditional variance: ", self.params[0]/(1-self.params[1]-self.params[2]-self.params[3]/2))
-        print("Market data unconditional variance: ", np.var(self.r_data))
+        # if self.type == "vanilla":
+        #     print("GARCH estimated unconditional variance: ", self.params[0]/(1-self.params[1]-self.params[2]))
+        # elif self.type == "gjr":
+        #     print("GJR-GARCH estimated unconditional variance: ", self.params[0]/(1-self.params[1]-self.params[2]-self.params[3]/2))
+        # print("Market data unconditional variance: ", np.var(self.r_data))
         
         if save_params:
             with open('garch_parameters.pickle', 'wb') as parameter_file:

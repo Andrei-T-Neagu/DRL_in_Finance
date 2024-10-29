@@ -243,8 +243,8 @@ class DeepHedgingEnvironment():
             self.input_t = torch.stack((self.dt * self.t * torch.ones(self.batch_size, device=self.device), self.S_t, self.delta_t_next, self.V_t/self.V_0, self.A_t, self.B_t), dim=1)
         
         self.t += 1                                                             # iterate time step
-        if self.t == self.N-1:                                                  # if t is the final time step
-            self.done = torch.ones(self.batch_size)                             #   set done to be True
+        if self.t == self.N:                                                  # if t is the final time step
+            self.done = torch.ones(self.batch_size, device=self.device)                             #   set done to be True
             self.path += 1                                                      #   iterate path index
             self.t = 0                                                          #   set time step to 0
             if (self.path)*self.batch_size > self.dataset.shape[0]-1:           #   if path is the final path in the dataset

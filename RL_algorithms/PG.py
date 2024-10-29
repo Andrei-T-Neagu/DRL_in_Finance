@@ -20,7 +20,14 @@ class PG:
         # Main and target networks
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = FFNN(in_features=state_size, out_features=action_size, num_layers=num_layers, hidden_size=hidden_size).to(self.device)
+        self.model.apply(self.init_weights)
+        
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
+
+    def init_weights(self, m):
+        if type(m) == nn.Linear:
+            torch.nn.init.xavier_normal_(m.weight)
+            m.bias.data.fill_(0)
 
     # load the model
     def load(self, name):
@@ -88,13 +95,15 @@ class PG:
         actions = torch.zeros(num_points, self.batch_size, batches, device=self.device)
         rewards = torch.zeros(self.batch_size, batches, device=self.device)
 
+        total_val_reward = torch.zeros(self.batch_size, batches, device=self.device)
+
         print("TESTING PG: ")
         for batch in range(batches):
             state = env.reset(self.batch_size)  # Initialize the environment and get the initial state
             done = torch.zeros(self.batch_size)
             total_reward = torch.zeros(self.batch_size, device=self.device)
 
-            i = 1
+            i = 0
             while torch.all(done == 0):
                 # Get the action from the trained model (greedy policy, no epsilon-greedy)
                 with torch.no_grad():
@@ -113,8 +122,10 @@ class PG:
                 i += 1
             
             loss = torch.sqrt(torch.mean(torch.square(torch.where(total_reward > 0, total_reward, 0))))
-            
+            total_val_reward[:,batch] = total_reward
+
             if batch % 100 == 0:
-                print(f"Episode {batch}/{batches-1}, Total Reward: {loss.item()}")
-        
-        return actions.flatten(1), rewards.flatten()
+                print(f"Batch: {batch}/{batches-1}, Total Reward: {loss.item()}")
+        rsmse = torch.sqrt(torch.mean(torch.square(torch.where(total_val_reward > 0, total_val_reward, 0))))
+
+        return actions.flatten(1), rewards.flatten(), rsmse.item()

@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
+from torch.distributions.categorical import Categorical
 
-class FFNN(nn.Module):
+class CategoricalFFNN(nn.Module):
     
     def __init__(self, in_features, out_features, num_layers, hidden_size, dueling=False, dropout=0.0):
         
@@ -18,6 +19,7 @@ class FFNN(nn.Module):
             self.final_linear = nn.Linear(in_features=hidden_size, out_features=out_features)
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(dropout)
+        self.softmax = nn.Softmax()
 
     def forward(self, x):
         x = self.linear1(x)
@@ -35,5 +37,6 @@ class FFNN(nn.Module):
             return Q
         else:
             x = self.final_linear(x)
-            x = torch.clamp(x, -20, 20)
-            return x
+            x = self.softmax(x)
+            dist = Categorical(x)
+            return dist
