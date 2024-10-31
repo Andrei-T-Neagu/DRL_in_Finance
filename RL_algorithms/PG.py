@@ -72,7 +72,7 @@ class PG:
             if e % 100 == 0:
                 print(f"Episode {e}/{episodes-1}, Total Reward: {loss.item()}")
 
-        # self.save("pg_model.pth")
+        self.save("pg_model.pth")
 
     def test(self, env):
         """

@@ -148,7 +148,7 @@ class DoubleDQN:
             if e % self.target_update == 0:
                 self.update_target_model()
             
-            if lr_schedule:
+            if lr_schedule and len(self.memory) > self.batch_size:
                 self.scheduler.step()
             
             # decay epsilon

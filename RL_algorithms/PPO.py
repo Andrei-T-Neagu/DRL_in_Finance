@@ -19,7 +19,7 @@ class PPO:
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         # Policy network
-        self.policy = FFNN(state_size, action_size * 2, num_layers, hidden_size).to(self.device) # Output mean and log_std
+        self.policy = FFNN(state_size, action_size * 2, num_layers, hidden_size, log_predicted=True).to(self.device) # Output mean and log_std
         # Value network
         self.value = FFNN(state_size, 1, num_layers, hidden_size).to(self.device)
 

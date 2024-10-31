@@ -11,6 +11,7 @@ import DeepHedgingEnvironment
 import RL_algorithms.DQN as DQN
 import RL_algorithms.PG as PG
 import RL_algorithms.PPO as PPO
+import RL_algorithms.DDPG as DDPG
 from data_generation_processes.GARCH import GARCH
 from scipy.stats import ttest_ind
 from scipy.stats import f
@@ -23,7 +24,7 @@ T = 1/252
 alpha = 1.00
 beta = 1.00
 
-batch_size = 128
+batch_size = 256
 train_size = 2**20
 test_size = 2**17
 epochs = 1
@@ -36,10 +37,10 @@ loss_type = "RSMSE"
 option_type = "call"
 position_type = "short"
 strike = 100
-num_layers = 3
-nbs_units = 128
+num_layers = 4
+nbs_units = 256
 num_heads = 8
-lr = 0.001
+lr = 0.00001
 dropout = 0
 prepro_stock = "log-moneyness"
 nbs_shares = 1
@@ -219,7 +220,7 @@ hyperparameter_path = "/home/a_eagu/DRL_in_Finance/dqn_hyperparameters/"
 configs = []
 rsmses = []
 
-episodes = 50000
+episodes = 1000
 ma_size = 100
 
 # deep_hedging_env.discretized = True
@@ -293,22 +294,35 @@ ma_size = 100
 
 # Train and test DQN model
 
-deep_hedging_env.discretized = True
-validation_deep_hedging_env.discretized = True
-action_size = deep_hedging_env.discretized_actions.shape[0]
-dqn_agent = DQN.DoubleDQN(state_size=6, action_size=action_size, num_layers=num_layers, hidden_size=nbs_units, lr=lr, batch_size=batch_size)
-dqn_train_losses = dqn_agent.train(deep_hedging_env, validation_deep_hedging_env, episodes=episodes, lr_schedule=True)
-dqn_actions, dqn_rewards, dqn_rsmse = dqn_agent.test(deep_hedging_env)
+# deep_hedging_env.discretized = True
+# validation_deep_hedging_env.discretized = True
+# action_size = deep_hedging_env.discretized_actions.shape[0]
+# dqn_agent = DQN.DoubleDQN(state_size=6, action_size=action_size, num_layers=num_layers, hidden_size=nbs_units, lr=lr, batch_size=batch_size)
+# dqn_train_losses = dqn_agent.train(deep_hedging_env, validation_deep_hedging_env, episodes=episodes, lr_schedule=True)
+# dqn_actions, dqn_rewards, dqn_rsmse = dqn_agent.test(deep_hedging_env)
 
-print("DQN RSMSE: " + str(dqn_rsmse))
+# hyperparameter_path = "/home/a_eagu/DRL_in_Finance/dqn_hyperparameters/"
+# dqn_losses = np.convolve(dqn_train_losses, np.ones(ma_size), 'valid') / ma_size
+# dqn_train_losses_fig = plt.figure(figsize=(12, 6))
+# plt.plot(dqn_losses, label="RSMSE")
+# plt.xlabel("Episodes")
+# plt.ylabel("RSMSE")
+# plt.legend()
+# plt.title("RSMSE " + str(ma_size) + " Episode Moving Average for DQN")
+# plt.savefig(hyperparameter_path + "training_losses/dqn_train_losses.png")
+# plt.close()
 
-dqn_actions = dqn_actions.cpu().detach().numpy()
-dqn_rewards = dqn_rewards.cpu().detach().numpy()
+# print("DQN RSMSE: " + str(dqn_rsmse))
 
-print(" ----------------- ")
-print(" DQN Results")
-print(" ----------------- ")
-Utils_general.print_stats(dqn_rewards, dqn_actions, "RSMSE", "DQN", V_0)
+# dqn_actions = dqn_actions.cpu().detach().numpy()
+# dqn_rewards = dqn_rewards.cpu().detach().numpy()
+
+# print(" ----------------- ")
+# print(" DQN Results")
+# print(" ----------------- ")
+# Utils_general.print_stats(dqn_rewards, dqn_actions, "RSMSE", "DQN", V_0)
+
+
 
 # Train and test PG model
 
@@ -337,9 +351,9 @@ Utils_general.print_stats(dqn_rewards, dqn_actions, "RSMSE", "DQN", V_0)
 # ppo_actions, ppo_rewards, ppo_rsmse = ppo_agent.test(deep_hedging_env)
 
 # hyperparameter_path = "/home/a_eagu/DRL_in_Finance/ppo_hyperparameters/"
-# ppo_dqn_losses = np.convolve(ppo_train_losses, np.ones(ma_size), 'valid') / ma_size
+# ppo_losses = np.convolve(ppo_train_losses, np.ones(ma_size), 'valid') / ma_size
 # ppo_train_losses_fig = plt.figure(figsize=(12, 6))
-# plt.plot(ppo_dqn_losses, label="RSMSE")
+# plt.plot(ppo_losses, label="RSMSE")
 # plt.xlabel("Episodes")
 # plt.ylabel("RSMSE")
 # plt.legend()
@@ -356,6 +370,33 @@ Utils_general.print_stats(dqn_rewards, dqn_actions, "RSMSE", "DQN", V_0)
 # print(" Proximal Policy Optimization Results")
 # print(" ----------------- ")
 # Utils_general.print_stats(ppo_rewards, ppo_actions, "RSMSE", "Proximal Policy Optimization", V_0)
+
+deep_hedging_env.discretized = False
+validation_deep_hedging_env.discretized = False
+ddpg_agent = DDPG.DDPG(state_size=6, action_size=1, num_layers=num_layers, hidden_size=nbs_units, lr=lr, batch_size=batch_size)
+ddpg_train_losses = ddpg_agent.train(deep_hedging_env, validation_deep_hedging_env, episodes=20000, lr_schedule=True)
+ddpg_actions, ddpg_rewards, ddpg_rsmse = ddpg_agent.test(deep_hedging_env)
+
+hyperparameter_path = "/home/a_eagu/DRL_in_Finance/ddpg_hyperparameters/"
+ddpg_losses = np.convolve(ddpg_train_losses, np.ones(ma_size), 'valid') / ma_size
+ddpg_train_losses_fig = plt.figure(figsize=(12, 6))
+plt.plot(ddpg_losses, label="RSMSE")
+plt.xlabel("Episodes")
+plt.ylabel("RSMSE")
+plt.legend()
+plt.title("RSMSE " + str(ma_size) + " Episode Moving Average for DDPG")
+plt.savefig(hyperparameter_path + "training_losses/ddpg_train_losses.png")
+plt.close()
+
+print("DDPG OPTIMIZATION RSMSE: " + str(ddpg_rsmse))
+
+ddpg_actions = ddpg_actions.cpu().detach().numpy()
+ddpg_rewards = ddpg_rewards.cpu().detach().numpy()
+
+print(" ----------------- ")
+print(" DDPG Optimization Results")
+print(" ----------------- ")
+Utils_general.print_stats(ddpg_rewards, ddpg_actions, "RSMSE", "DDPG", V_0)
 
 # agent_ffnn.model = torch.load(name_ffnn)
 # deltas_ffnn, hedging_err_ffnn, S_t_ffnn, V_t_ffnn, A_t_ffnn, B_t_ffnn = agent_ffnn.test(test_size=test_size, test_set=test_set)

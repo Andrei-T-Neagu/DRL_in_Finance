@@ -128,7 +128,7 @@ class PPO_test:
                         log_probs = action_log_prob.unsqueeze(1)
                         dones = done.unsqueeze(1)
                         values = value
-                    else: 
+                    else:
                         rewards = torch.cat((rewards, reward.unsqueeze(1)), 1)
                         actions = torch.cat((actions, action.unsqueeze(1)), 1)
                         states = torch.cat((states, state.unsqueeze(1)), 1)

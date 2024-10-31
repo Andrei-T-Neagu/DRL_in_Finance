@@ -42,9 +42,9 @@ class DoubleDQN:
     # Set the parameters of the target model to be the same as the main model
     def update_target_model(self):
         target_net_state_dict = self.target_model.state_dict()
-        policy_net_state_dict = self.model.state_dict()
-        for key in policy_net_state_dict:
-            target_net_state_dict[key] = policy_net_state_dict[key]*self.tau + target_net_state_dict[key]*(1-self.tau)
+        main_net_state_dict = self.model.state_dict()
+        for key in main_net_state_dict:
+            target_net_state_dict[key] = main_net_state_dict[key]*self.tau + target_net_state_dict[key]*(1-self.tau)
         self.target_model.load_state_dict(target_net_state_dict)
 
     # Store a tuple (s,a,r,s') in the replay memory buffer
@@ -162,7 +162,7 @@ class DoubleDQN:
             if e % self.target_update == 0:
                 self.update_target_model()
             
-            if lr_schedule:
+            if lr_schedule and len(self.memory) > self.batch_size:
                 self.scheduler.step()
             
             # decay epsilon
@@ -204,9 +204,9 @@ class DoubleDQN:
             done = torch.zeros(self.batch_size)
             total_reward = torch.zeros(self.batch_size, device=self.device)
 
-            i = 1
+            i = 0
             while torch.all(done == 0):
-                print(i)
+
                 # Get the action from the trained model (greedy policy, no epsilon-greedy)
                 with torch.no_grad():
                     q_values = self.model(state)
