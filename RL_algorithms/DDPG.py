@@ -9,7 +9,7 @@ from option_hedging.code_pytorch.DeepHedgingEnvironment import DeepHedgingEnviro
 import torch.optim.lr_scheduler as lr_scheduler
 
 class DDPG:
-    def __init__(self, state_size, action_size, num_layers, hidden_size, gamma=0.99, lr=0.0001, batch_size=128, epochs=10, target_update=20, tau=0.5):
+    def __init__(self, state_size, action_size, num_layers, hidden_size, gamma=1.0, lr=0.0001, batch_size=128, epochs=10, target_update=20, tau=0.5):
         self.state_size = state_size            
         self.action_size = action_size
         self.gamma = gamma                      # discount factor
@@ -115,11 +115,11 @@ class DDPG:
         episode_val_loss = []
 
         if lr_schedule:
-            self.value_scheduler = lr_scheduler.LinearLR(self.value_optimizer, start_factor=1.0, end_factor=0.01, total_iters=episodes)
-            self.policy_scheduler = lr_scheduler.LinearLR(self.policy_optimizer, start_factor=1.0, end_factor=0.01, total_iters=episodes)
+            self.value_scheduler = lr_scheduler.LinearLR(self.value_optimizer, start_factor=1.0, end_factor=0.0001, total_iters=episodes)
+            self.policy_scheduler = lr_scheduler.LinearLR(self.policy_optimizer, start_factor=1.0, end_factor=0.0001, total_iters=episodes)
 
-        self.epsilon = 1.0
-        epsilon_decay = self.epsilon/episodes
+        self.epsilon = 0.5
+        epsilon_decay = self.epsilon/(episodes+1)
 
         print("TRAINING DDPG: ")
 

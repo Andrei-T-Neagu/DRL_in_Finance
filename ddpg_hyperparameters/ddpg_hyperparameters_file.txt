@@ -1,0 +1,16 @@
+config: 16 | lr: 0.0001 | num_layers: 3 | nbs_units: 128 | batch_size: 128 | rsmse: 0.25248298048973083
+config: 10 | lr: 0.0001 | num_layers: 4 | nbs_units: 256 | batch_size: 128 | rsmse: 0.3146567642688751
+config: 9 | lr: 0.0001 | num_layers: 4 | nbs_units: 256 | batch_size: 256 | rsmse: 0.3368688225746155
+config: 13 | lr: 0.0001 | num_layers: 3 | nbs_units: 256 | batch_size: 256 | rsmse: 0.4966937303543091
+config: 14 | lr: 0.0001 | num_layers: 3 | nbs_units: 256 | batch_size: 128 | rsmse: 0.5388154983520508
+config: 11 | lr: 0.0001 | num_layers: 4 | nbs_units: 128 | batch_size: 256 | rsmse: 0.5611163377761841
+config: 6 | lr: 0.001 | num_layers: 3 | nbs_units: 256 | batch_size: 128 | rsmse: 0.6133778691291809
+config: 1 | lr: 0.001 | num_layers: 4 | nbs_units: 256 | batch_size: 256 | rsmse: 4.85214900970459
+config: 3 | lr: 0.001 | num_layers: 4 | nbs_units: 128 | batch_size: 256 | rsmse: 8.050187110900879
+config: 8 | lr: 0.001 | num_layers: 3 | nbs_units: 128 | batch_size: 128 | rsmse: 32.69266128540039
+config: 12 | lr: 0.0001 | num_layers: 4 | nbs_units: 128 | batch_size: 128 | rsmse: 102.9699935913086
+config: 2 | lr: 0.001 | num_layers: 4 | nbs_units: 256 | batch_size: 128 | rsmse: 8579.544921875
+config: 5 | lr: 0.001 | num_layers: 3 | nbs_units: 256 | batch_size: 256 | rsmse: 238228.0
+config: 4 | lr: 0.001 | num_layers: 4 | nbs_units: 128 | batch_size: 128 | rsmse: 1510218.125
+config: 15 | lr: 0.0001 | num_layers: 3 | nbs_units: 128 | batch_size: 256 | rsmse: 6179185.0
+config: 7 | lr: 0.001 | num_layers: 3 | nbs_units: 128 | batch_size: 256 | rsmse: 159835392.0

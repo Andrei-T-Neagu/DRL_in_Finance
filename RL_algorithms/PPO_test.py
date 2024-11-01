@@ -11,7 +11,7 @@ from neural_networks.CategoricalActor import CategoricalFFNN
 import gymnasium as gym
 
 class PPO_test:
-    def __init__(self, state_size, action_size, num_layers, hidden_size, gamma=0.99, lr=0.0001, clip_eps=0.2, batch_size=128, epochs=10, lambd=0.95):
+    def __init__(self, state_size, action_size, num_layers, hidden_size, gamma=1.0, lr=0.0001, clip_eps=0.2, batch_size=128, epochs=10, lambd=0.95):
         self.state_size = state_size            
         self.action_size = action_size
         self.gamma = gamma                      # discount factor               

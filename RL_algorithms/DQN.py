@@ -10,13 +10,12 @@ import torch.optim.lr_scheduler as lr_scheduler
 
 # Double DQN agent
 class DoubleDQN:
-    def __init__(self, state_size, action_size, num_layers, hidden_size, gamma=0.99, epsilon=1.0, epsilon_min=0.05, epsilon_decay=0.9997, lr=0.0001, batch_size=128, target_update=20, tau=0.5):
+    def __init__(self, state_size, action_size, num_layers, hidden_size, gamma=1.0, epsilon=1.0, epsilon_min=0.05, lr=0.0001, batch_size=128, target_update=20, tau=0.5):
         self.state_size = state_size
         self.action_size = action_size
         self.gamma = gamma                      # discount factor
         self.epsilon = epsilon                  # epsilon from epsilon-greedy action selection (random action taken with probability epsilon)
         self.epsilon_min = epsilon_min          # minimum value for epsilon
-        self.epsilon_decay = epsilon_decay      # decay rate of epsilon
         self.lr = lr                            # learning rate 
         self.batch_size = batch_size            # batch size    
         self.target_update = target_update      # Frequency at which target model is updated
@@ -120,7 +119,9 @@ class DoubleDQN:
         episode_val_loss = []
 
         if lr_schedule:
-            self.scheduler = lr_scheduler.LinearLR(self.optimizer, start_factor=1.0, end_factor=0.01, total_iters=episodes)
+            self.scheduler = lr_scheduler.LinearLR(self.optimizer, start_factor=1.0, end_factor=0.0001, total_iters=episodes)
+
+        epsilon_decay = self.epsilon/(episodes+1)
 
         print("TRAINING DQN: ")
 
@@ -166,11 +167,10 @@ class DoubleDQN:
                 self.scheduler.step()
             
             # decay epsilon
-            if self.epsilon > self.epsilon_min:
-                self.epsilon *= self.epsilon_decay
+            self.epsilon -= epsilon_decay
             
             if e % 100 == 0:
-                print(f"Episode {e}/{episodes-1}, Epsilon: {self.epsilon}, Validation Loss: {val_loss.item()}")
+                print(f"Episode {e}/{episodes-1}, Validation Loss: {val_loss.item()}")
 
         self.save("dqn_model.pth")
         return episode_val_loss

@@ -214,8 +214,8 @@ def BS_delta(S, T, r, sigma, strike, style, t=0):
 
 
 # L_t function for liquidation value
-def liquid_func(S_t, x, alpha, beta, A = 0, B = 0):
-    return cost_selling(S_t, np.maximum(x, 0), beta, B) - cost_buying(S_t, np.maximum(-x, 0), alpha, A)
+def liquid_func(S_t, x, trans_costs):
+    return cost_selling(S_t, np.maximum(x, 0), trans_costs) - cost_buying(S_t, np.maximum(-x, 0), trans_costs)
 
 
 # l_t function computation for bank interest
@@ -227,29 +227,26 @@ def int_rate_bank(x, r_lend, r_borrow, h):
 # F_t^a function - cost of buying
 # - input: S_t: current spot price
 # -        x  : number of shares to buy
-def cost_buying(S_t, x, alpha, A = 0):
-    return S_t * ((1 + x + A) ** alpha - (1 + A) ** alpha)
+def cost_buying(S_t, x, trans_costs):
+    return S_t * x + trans_costs * x
 
 
 # F_t^b function - profit from selling
 # - input: S_t: current spot price
 # -        x  : number of shares to sell
-def cost_selling(S_t, x, beta, B = 0):
-    return S_t * ((1 + x + B) ** beta - (1 + B) ** beta)
+def cost_selling(S_t, x, trans_costs):
+    return S_t * x - trans_costs * x
 
 # Function to compute delta-hedging using given trajectories of the geometric BM with resilience
 # set hab = [-1,-1] for no impact case
-def delta_hedge_res(St_traj, r_borrow, r_lend, sigma, T, alpha, beta, option_type, position_type, strike, V_0, nbs_shares, hab = [-1,-1], Leland=False):
+def delta_hedge_res(St_traj, r_borrow, r_lend, sigma, T, option_type, position_type, strike, V_0, nbs_shares, trans_costs = 0.0, Leland=False):
 
     time_vect_len, nb_traj = St_traj.shape  # nb of time points (counting t=0), nb of trajectories
     N = time_vect_len - 1 # step-size
     delta_t = T / N  # Maturity in years/nb of time intervals
 
     if Leland:
-        B_t = 0
-        price_selling = strike * ((1 + 1 + B_t) ** beta - (1 + B_t) ** beta)
-        k = -(price_selling-strike)/strike
-        sigma = sigma*math.sqrt(1+math.sqrt(2/math.pi)*(k/(sigma*math.sqrt(delta_t))))
+        sigma = sigma*math.sqrt(1+math.sqrt(2/math.pi)*(trans_costs/(sigma*math.sqrt(delta_t))))
 
     V_t = np.zeros(St_traj.shape)
     A_t = np.zeros(St_traj.shape)
@@ -272,65 +269,42 @@ def delta_hedge_res(St_traj, r_borrow, r_lend, sigma, T, alpha, beta, option_typ
             deltas[t, :] = nbs_shares * BS_delta(St_traj[t, :], T - t * delta_t, (r_borrow + r_lend) / 2, sigma, strike, -1)
 
         if (t == 0):
-            cashflow = liquid_func(St_traj[t, :], -deltas[t, :], alpha, beta, A_t[t, :], B_t[t, :])  # cashflow of first investment done
+            cashflow = liquid_func(St_traj[t, :], -deltas[t, :], trans_costs)  # cashflow of first investment done
             Y_t = V_t[t, :] + cashflow  # time-0 amount in the bank account
-            if hab[0] == -1:
-                A_t[t+1, :] = A_t[0, :]
-            else:
-                A_t[t+1, :] = (A_t[t, :] + np.maximum(deltas[t, :], 0)) * np.exp(-hab[0] * delta_t)
-            if hab[1] == -1:
-                B_t[t+1, :] = B_t[0, :]
-            else:
-                B_t[t+1, :] = (B_t[t, :] + np.maximum(-deltas[t, :], 0)) * np.exp(-hab[1] * delta_t)
 
         else:
             diff_delta_t = deltas[t, :] - deltas[t - 1, :]
-            cashflow = liquid_func(St_traj[t, :], -diff_delta_t, alpha, beta, A_t[t,:], B_t[t,:])
+            cashflow = liquid_func(St_traj[t, :], -diff_delta_t, trans_costs)
             Y_t = int_rate_bank(Y_t, r_lend, r_borrow, delta_t) + cashflow  # time-t amount in the bank account
-            if hab[0] == -1:
-                A_t[t+1, :] = A_t[0, :]
-            else:
-                A_t[t+1, :] = (A_t[t, :] + np.maximum(diff_delta_t, 0)) * np.exp(-hab[0] * delta_t)
-            if hab[1] == -1:
-                B_t[t+1, :] = B_t[0, :]
-            else:
-                B_t[t+1, :] = (B_t[t, :] + np.maximum(-diff_delta_t, 0)) * np.exp(-hab[1] * delta_t)
 
-        L_t = liquid_func(St_traj[t+1, :], deltas[t, :], alpha, beta, A_t[t+1, :], B_t[t+1, :])
+        L_t = liquid_func(St_traj[t+1, :], deltas[t, :], trans_costs)
         V_t = Y_t + L_t
 
     if (position_type == "short"):
         if (option_type == "call"):
-            condition = np.greater_equal(cost_selling(St_traj[-1, :], nbs_shares, beta, B_t[-1, :]), nbs_shares * strike)
-            hedging_gain = np.where(condition, Y_t + liquid_func(St_traj[-1, :], deltas[-1, :] - nbs_shares, alpha,
-                                                                 beta, A_t[-1, :], B_t[-1, :]) + nbs_shares * strike,
-                                    Y_t + liquid_func(St_traj[-1, :], deltas[-1, :], alpha, beta, A_t[-1, :], B_t[-1, :]))
+            condition = np.greater_equal(cost_selling(St_traj[-1, :], nbs_shares, trans_costs), nbs_shares * strike)
+            hedging_gain = np.where(condition, Y_t + liquid_func(St_traj[-1, :], deltas[-1, :] - nbs_shares, trans_costs) + nbs_shares * strike,
+                                    Y_t + liquid_func(St_traj[-1, :], deltas[-1, :], trans_costs))
 
         elif (option_type == "put"):
-            condition = np.less_equal(cost_selling(St_traj[-1, :], nbs_shares, beta, B_t[-1, :]), nbs_shares * strike)
-            hedging_gain = np.where(condition, Y_t + liquid_func(St_traj[-1, :], deltas[-1, :] + nbs_shares, alpha,
-                                                                 beta, A_t[-1, :], B_t[-1, :]) - nbs_shares * strike,
-                                    Y_t + liquid_func(St_traj[-1, :], deltas[-1, :], alpha, beta, A_t[-1, :], B_t[-1, :]))
+            condition = np.less_equal(cost_selling(St_traj[-1, :], nbs_shares, trans_costs), nbs_shares * strike)
+            hedging_gain = np.where(condition, Y_t + liquid_func(St_traj[-1, :], deltas[-1, :] + nbs_shares, trans_costs) - nbs_shares * strike,
+                                    Y_t + liquid_func(St_traj[-1, :], deltas[-1, :], trans_costs))
 
     elif (position_type == "long"):
         if (option_type == "call"):
-            condition = np.greater_equal(cost_selling(St_traj[-1, :], nbs_shares, beta, B_t[-1, :]), nbs_shares * strike)
-            hedging_gain = np.where(condition, Y_t + liquid_func(St_traj[-1, :], deltas[-1, :] + nbs_shares, alpha,
-                                                                 beta, A_t[-1, :], B_t[-1, :]) - nbs_shares * strike,
-                                    Y_t + liquid_func(St_traj[-1, :], deltas[-1, :], alpha, beta, A_t[-1, :], B_t[-1, :]))
+            condition = np.greater_equal(cost_selling(St_traj[-1, :], nbs_shares, trans_costs), nbs_shares * strike)
+            hedging_gain = np.where(condition, Y_t + liquid_func(St_traj[-1, :], deltas[-1, :] + nbs_shares, trans_costs) - nbs_shares * strike,
+                                    Y_t + liquid_func(St_traj[-1, :], deltas[-1, :], trans_costs))
 
         elif (option_type == "put"):
-            condition = np.less_equal(cost_selling(St_traj[-1, :], nbs_shares, beta, B_t[-1, :]), nbs_shares * strike)
-            hedging_gain = np.where(condition, Y_t + liquid_func(St_traj[-1, :], deltas[-1, :] - nbs_shares, alpha,
-                                                                 beta, A_t[-1, :], B_t[-1, :]) + nbs_shares * strike,
-                                    Y_t + liquid_func(St_traj[-1, :], deltas[-1, :], alpha, beta, A_t[-1, :], B_t[-1, :]))
+            condition = np.less_equal(cost_selling(St_traj[-1, :], nbs_shares, trans_costs), nbs_shares * strike)
+            hedging_gain = np.where(condition, Y_t + liquid_func(St_traj[-1, :], deltas[-1, :] - nbs_shares, trans_costs) + nbs_shares * strike,
+                                    Y_t + liquid_func(St_traj[-1, :], deltas[-1, :], trans_costs))
 
     hedging_err = -hedging_gain
 
     return deltas, hedging_err
-
-
-
 
 # Function to compute delta-hedging results
 # - currently working with:
