@@ -113,7 +113,8 @@ def print_stats(hedging_err, deltas, loss_type, model_name, V_0, riskaversion=99
     print('STD error: %.4f' % (std))
     print('Avg turnover of underlying: %.4f' % (turnover))
     RMSE = np.sqrt(MSE)
-    return (hedging_err, deltas, RMSE, std )
+    RSMSE = np.sqrt(semi_MSE)
+    return (hedging_err, deltas, RMSE, RSMSE, std)
 
 
 # -------------------------------------------------------------------------------------------------#

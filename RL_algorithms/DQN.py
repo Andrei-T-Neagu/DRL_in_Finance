@@ -10,7 +10,7 @@ import torch.optim.lr_scheduler as lr_scheduler
 
 # Double DQN agent
 class DoubleDQN:
-    def __init__(self, state_size, action_size, num_layers, hidden_size, gamma=1.0, epsilon=1.0, epsilon_min=0.05, lr=0.0001, batch_size=128, target_update=20, tau=0.5):
+    def __init__(self, state_size, action_size, num_layers, hidden_size, gamma=1.0, epsilon=1.0, epsilon_min=0.05, lr=0.0001, batch_size=128, target_update=20, tau=0.5, double=True, dueling=True):
         self.state_size = state_size
         self.action_size = action_size
         self.gamma = gamma                      # discount factor
@@ -21,13 +21,14 @@ class DoubleDQN:
         self.target_update = target_update      # Frequency at which target model is updated
         # Experience replay buffer
         self.memory = deque(maxlen=10000)
-        
+        self.double = double
+
         # Main and target networks
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.model = FFNN(in_features=state_size, out_features=action_size, num_layers=num_layers, hidden_size=hidden_size, dueling=True).to(self.device)
+        self.model = FFNN(in_features=state_size, out_features=action_size, num_layers=num_layers, hidden_size=hidden_size, dueling=dueling).to(self.device)
         self.model.apply(self.init_weights)
         
-        self.target_model = FFNN(in_features=state_size, out_features=action_size, num_layers=num_layers, hidden_size=hidden_size, dueling=True).to(self.device)
+        self.target_model = FFNN(in_features=state_size, out_features=action_size, num_layers=num_layers, hidden_size=hidden_size, dueling=dueling).to(self.device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
         self.tau = tau
         # Synchronize target model with main model
@@ -53,10 +54,10 @@ class DoubleDQN:
     # Take an action according to the epsilon-greedy action selection strategy
     def act(self, state):
         if np.random.rand() <= self.epsilon:
-            return torch.randint(self.action_size, size=(1,))
+            return torch.randint(self.action_size, size=(1,1), device=self.device)
         with torch.no_grad():
             action_values = self.model(state)
-        return torch.argmax(action_values, dim=1)
+        return torch.argmax(action_values, dim=1, keepdim=True)
 
     # perform an update based on a mini batch sampled from the replay memory buffer
     def replay(self):
@@ -69,19 +70,22 @@ class DoubleDQN:
         
         states, actions, rewards, next_states, dones = zip(*minibatch)
         
-        states = torch.vstack(states).to(self.device)
-        actions = torch.LongTensor(actions).to(self.device)
-        rewards = torch.FloatTensor(rewards).to(self.device)
-        next_states = torch.vstack(next_states).to(self.device)
-        dones = torch.FloatTensor(dones).to(self.device)
+        states = torch.vstack(states)
+        actions = torch.vstack(actions)
+        rewards = torch.vstack(rewards)
+        next_states = torch.vstack(next_states)
+        dones = torch.vstack(dones)
 
-        q_values = self.model(states).squeeze(1)
-        next_q_values = self.model(next_states).squeeze(1)
+        q_values = self.model(states)
+        next_q_values = self.model(next_states)
         with torch.no_grad():
-            next_q_target = self.target_model(next_states).squeeze(1)
+            if self.double:
+                next_q_target = self.target_model(next_states)
+            else:
+                next_q_target = self.model(next_states)
 
         # q_values of the actions from the minibatch
-        q_value = q_values.gather(1, actions.unsqueeze(1))
+        q_value = q_values.gather(1, actions)
 
         # pick the next action greedily using the main network
         next_action = torch.argmax(next_q_values, dim=1, keepdim=True)
@@ -89,7 +93,7 @@ class DoubleDQN:
         target_q_value = next_q_target.gather(1, next_action)
 
         # expected q_values
-        expected_q_value = rewards.unsqueeze(1) + (self.gamma * target_q_value * (1 - dones.unsqueeze(1)))
+        expected_q_value = rewards + (self.gamma * target_q_value * (1 - dones))
 
         # current q_value vs expected q_value
         loss = nn.HuberLoss()(q_value, expected_q_value)
@@ -97,9 +101,6 @@ class DoubleDQN:
         # perform update step
         self.optimizer.zero_grad()
         loss.backward()
-        # for p in self.model.parameters():
-        #     print(p.grad.norm())
-        # nn.utils.clip_grad_value_(self.model.parameters(), 100)
         self.optimizer.step()
 
     # load the model
@@ -129,7 +130,7 @@ class DoubleDQN:
             state = env.reset()
             val_state = val_env.reset(self.batch_size)
 
-            done = torch.zeros(1)
+            done = torch.zeros(1,1)
             val_done = torch.zeros(self.batch_size)
 
             total_reward = torch.zeros(1, device=self.device)
@@ -140,7 +141,7 @@ class DoubleDQN:
                 action = self.act(state)
                 with torch.no_grad():
                     val_q_values = self.model(val_state)
-                    val_action = torch.argmax(val_q_values, dim=1)
+                    val_action = torch.argmax(val_q_values, dim=1, keepdim=True)
 
                 next_state, reward, done = env.step(action)
                 val_next_state, val_reward, val_done = val_env.step(val_action)
@@ -160,7 +161,7 @@ class DoubleDQN:
 
             episode_val_loss.append(val_loss.item())
 
-            if e % self.target_update == 0:
+            if self.double and e % self.target_update == 0:
                 self.update_target_model()
             
             if lr_schedule and len(self.memory) > self.batch_size:
@@ -172,7 +173,7 @@ class DoubleDQN:
             if e % 100 == 0:
                 print(f"Episode {e}/{episodes-1}, Validation Loss: {val_loss.item()}")
 
-        self.save("dqn_model.pth")
+        # self.save("dqn_model.pth")
         return episode_val_loss
 
     def test(self, env):

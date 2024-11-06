@@ -1,2 +1,0 @@
-|---------------------------Hyperparameter Tuning for Transformer for 1 Epochs------------------------|
-{'batch_size': 256, 'nbs_layers': 4, 'nbs_units': 256, 'num_heads': 8}: Validation Loss: 27.074357986450195 | Test Loss: 27.205123901367188 | Number of Parameters: 1592833 | Time Taken: 0:04:18.601462

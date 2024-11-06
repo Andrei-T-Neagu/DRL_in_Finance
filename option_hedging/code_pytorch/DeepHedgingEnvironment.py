@@ -125,6 +125,7 @@ class DeepHedgingEnvironment():
         # When actions are discretized
         if self.discretized:
             self.delta_t_next = self.discretized_actions[action]                            # torch.Tensor of size [self.batch_size]. Action to be taken at next time step     
+            self.delta_t_next = self.delta_t_next.flatten()
         else:
             self.delta_t_next = action.flatten()
         # Once the hedge is computed, update M_t (cash reserve)

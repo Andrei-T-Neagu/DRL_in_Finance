@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from ray import train
 import numpy as np
 import random
 from collections import deque
@@ -9,25 +10,37 @@ from option_hedging.code_pytorch.DeepHedgingEnvironment import DeepHedgingEnviro
 import torch.optim.lr_scheduler as lr_scheduler
 
 class DDPG:
-    def __init__(self, state_size, action_size, num_layers, hidden_size, gamma=1.0, lr=0.0001, batch_size=128, epochs=10, target_update=20, tau=0.5):
+    def __init__(self, config=None, state_size=3, action_size=1, num_layers=2, hidden_size=128, lr=0.0001, batch_size=128):
         self.state_size = state_size            
         self.action_size = action_size
-        self.gamma = gamma                      # discount factor
-        self.lr = lr                            # learning rate
-        self.batch_size = batch_size            # batch size
-        self.epochs = epochs                    # number of epochs
-        self.target_update = target_update      # Frequency at which target model is updated
+        
+        # if config is not None:
+        self.gamma = config.get("gamma", 1.0)                      # discount factor
+        self.lr = config.get("lr", 0.0001)                         # learning rate
+        self.batch_size = config.get("batch_size", 128)            # batch size
+        self.target_update = config.get("target_update", 20)       # Frequency at which target model is updated
+        self.tau = config.get("tau", 0.5)
+        self.num_layers = config.get("num_layers")
+        self.hidden_size = config.get("hidden_size")
+        # else:
+        #     self.gamma = 1.0                      # discount factor
+        #     self.lr = lr                         # learning rate
+        #     self.batch_size = batch_size            # batch size
+        #     self.target_update = 20      # Frequency at which target model is updated
+        #     self.tau = 0.5
+        #     self.num_layers = num_layers
+        #     self.hidden_size = hidden_size
         # Experience replay buffer
         self.memory = deque(maxlen=10000)
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         # Policy network
-        self.policy = FFNN(state_size, action_size, num_layers, hidden_size).to(self.device)
-        self.target_policy = FFNN(state_size, action_size, num_layers, hidden_size).to(self.device)
+        self.policy = FFNN(state_size, action_size, self.num_layers, self.hidden_size, policy=True).to(self.device)
+        self.target_policy = FFNN(state_size, action_size, self.num_layers, self.hidden_size, policy=True).to(self.device)
         
         # Value network
-        self.value = FFNN(state_size + 1, 1, num_layers, hidden_size).to(self.device)
-        self.target_value = FFNN(state_size + 1, 1, num_layers, hidden_size).to(self.device)
+        self.value = FFNN(state_size + 1, 1, self.num_layers, self.hidden_size).to(self.device)
+        self.target_value = FFNN(state_size + 1, 1, self.num_layers, self.hidden_size).to(self.device)
 
         self.policy.apply(self.init_weights)
         self.value.apply(self.init_weights)
@@ -35,7 +48,6 @@ class DDPG:
         self.policy_optimizer = optim.Adam(self.policy.parameters(), self.lr)
         self.value_optimizer = optim.Adam(self.value.parameters(), self.lr)
 
-        self.tau = tau
         self.target_policy.load_state_dict(self.policy.state_dict())
         self.target_value.load_state_dict(self.value.state_dict())
 
@@ -66,6 +78,7 @@ class DDPG:
         # Predict mean and log_std
         action = self.policy(state)
         action = action + torch.randn(action.shape, device=self.device) * self.epsilon
+        action = torch.clamp(action, -0.5, 2.0)
         return action
 
     # perform an update based on a mini batch sampled from the replay memory buffer
@@ -79,11 +92,11 @@ class DDPG:
         
         states, actions, rewards, next_states, dones = zip(*minibatch)
         
-        states = torch.vstack(states).to(self.device)
-        actions = torch.vstack(actions).to(self.device)
-        rewards = torch.vstack(rewards).to(self.device)
-        next_states = torch.vstack(next_states).to(self.device)
-        dones = torch.vstack(dones).to(self.device)
+        states = torch.vstack(states)
+        actions = torch.vstack(actions)
+        rewards = torch.vstack(rewards)
+        next_states = torch.vstack(next_states)
+        dones = torch.vstack(dones)
     
         with torch.no_grad():
             target_actions = self.target_policy(next_states)
@@ -105,7 +118,7 @@ class DDPG:
         policy_loss.backward()
         self.policy_optimizer.step()
 
-    def train(self, env, val_env, episodes=200, lr_schedule = True):
+    def train(self, env, val_env, episodes=1000, lr_schedule = True):
         self.policy.train()
         self.value.train()
         
@@ -132,7 +145,6 @@ class DDPG:
 
             total_reward = torch.zeros(1, device=self.device)
             val_total_reward = torch.zeros(self.batch_size, device=self.device)
-            
             while torch.all(done == 0):
 
                 with torch.no_grad():
@@ -168,11 +180,11 @@ class DDPG:
 
             if e % 100 == 0:
                 print(f"Episode {e}/{episodes-1}, Validation Loss: {val_loss.item()}")
-
-        self.save("ddpg_model.pth")
+            
+        # self.save("ddpg_model.pth")
         return episode_val_loss
 
-    def test(self, env, episodes=1000, render=False):
+    def test(self, env):
         """
         Test the trained PPO agent in the environment.
         
@@ -227,8 +239,11 @@ class DDPG:
 
             if batch % 100 == 0:
                 print(f"Batch: {batch}/{batches-1}, Total Reward: {loss.item()}")
-        rsmse = torch.sqrt(torch.mean(torch.square(torch.where(total_val_reward > 0, total_val_reward, 0))))
 
+        rsmse = torch.sqrt(torch.mean(torch.square(torch.where(total_val_reward > 0, total_val_reward, 0))))
+        
+        train.report({"rsmse": rsmse.item()})
+        
         return actions.flatten(1), rewards.flatten(), rsmse.item()
 
     def save(self, name):

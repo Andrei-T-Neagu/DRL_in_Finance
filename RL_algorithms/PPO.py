@@ -7,11 +7,10 @@ from option_hedging.code_pytorch.DeepHedgingEnvironment import DeepHedgingEnviro
 import torch.optim.lr_scheduler as lr_scheduler
 
 class PPO:
-    def __init__(self, state_size, action_size, num_layers, hidden_size, gamma=0.99, lr=0.0001, clip_eps=0.2, batch_size=128, epochs=10, lambd=0.95):
+    def __init__(self, state_size, action_size, num_layers, hidden_size, gamma=0.99, lr=0.0001, clip_eps=0.2, batch_size=128, epochs=10):
         self.state_size = state_size            
         self.action_size = action_size
-        self.gamma = gamma                      # discount factor               
-        self.lambd = lambd                      # lambda used in the Generalized Advantage Estimate  
+        self.gamma = gamma                      # discount factor                 
         self.clip_eps = clip_eps                # clipping factor of the gradient estimate
         self.lr = lr                            # learning rate
         self.batch_size = batch_size            # batch size
@@ -195,7 +194,7 @@ class PPO:
                 print(f"Episode {episode}/{episodes}, Policy Loss: {loss_policy.item()}, Value Loss: {loss_value.item()}, Validation Loss: {val_loss.item()}")
 
         # Save the trained model after training
-        self.save("ppo_model.pth")
+        # self.save("ppo_model.pth")
         return episode_val_loss
 
     def test(self, env, episodes=1000, render=False):

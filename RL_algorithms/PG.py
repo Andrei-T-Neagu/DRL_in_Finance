@@ -7,6 +7,7 @@ from collections import deque
 from neural_networks.FFNN import FFNN
 from option_hedging.code_pytorch.DeepHedgingEnvironment import DeepHedgingEnvironment
 import torch.optim.lr_scheduler as lr_scheduler
+import matplotlib.pyplot as plt
 
 class PG:
     """
@@ -80,13 +81,14 @@ class PG:
         torch.save(self.model.state_dict(), name)
 
     # Training loop
-    def train(self, env, episodes=1000, lr_schedule = True):
+    def train(self, env, BS_rsmse, episodes=1000, lr_schedule = True):
         """
         Training loop for policy gradient with a deterministic policy
 
         Args:
         - env            | DeepHedgingEnvironment | the deep hedging environment
         - episodes       | int                    | the number of episodes to train for
+        - BS_rsmse       | float                  | rsmse achieved by Black-Scholes delta hedge
         - lr_schedule    | boolean                | whether to use a linear decay scheduler for the learning rate
 
         Returns:
@@ -127,7 +129,11 @@ class PG:
             if e % 100 == 0:
                 print(f"Episode {e}/{episodes-1}, Total Reward: {loss.item()}")
 
-        self.save("pg_model.pth")
+            if len(episode_losses) > 10000:
+                if sum(episode_losses[:-10000])/10000 < BS_rsmse:
+                    break
+        
+        # self.save("pg_model.pth")
         return episode_losses
 
     def test(self, env):
