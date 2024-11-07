@@ -8,13 +8,11 @@ import random
 from collections import deque
 from neural_networks.FFNN import FFNN
 import torch.optim.lr_scheduler as lr_scheduler
-from neural_networks.CategoricalActor import CategoricalFFNN
 import gymnasium as gym
-from torch.distributions.categorical import Categorical
 import matplotlib.pyplot as plt
 
 class DDPG_test:
-    def __init__(self, state_size, action_size, num_layers, hidden_size, gamma=0.99, lr=0.0001, batch_size=128, epochs=10, target_update=10, tau=0.5):
+    def __init__(self, state_size, action_size, num_layers, hidden_size, gamma=0.99, lr=0.0001, batch_size=128, epochs=10, target_update=1, tau=0.1, twin_delayed=False):
         self.state_size = state_size            
         self.action_size = action_size
         self.gamma = gamma                      # discount factor
@@ -24,7 +22,7 @@ class DDPG_test:
         self.target_update = target_update      # Frequency at which target model is updated
         # Experience replay buffer
         self.memory = deque(maxlen=10000)
-
+        self.twin_delayed = twin_delayed
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         # Policy network
         self.policy = FFNN(state_size, action_size, num_layers, hidden_size).to(self.device)
@@ -43,6 +41,13 @@ class DDPG_test:
         self.tau = tau
         self.target_policy.load_state_dict(self.policy.state_dict())
         self.target_value.load_state_dict(self.value.state_dict())
+
+        if self.twin_delayed:
+            self.value2 = FFNN(state_size + 1, 1, num_layers, hidden_size).to(self.device)
+            self.value2.apply(self.init_weights)
+            self.value2_optimizer = optim.Adam(self.value2.parameters(), self.lr)
+            self.target_value2 = FFNN(state_size + 1, 1, num_layers, hidden_size).to(self.device)
+            self.target_value2.load_state_dict(self.value2.state_dict())
 
     def init_weights(self, m):
         if type(m) == nn.Linear:
@@ -67,6 +72,13 @@ class DDPG_test:
             target_value_net_state_dict[key] = value_net_state_dict[key]*self.tau + target_value_net_state_dict[key]*(1-self.tau)
         self.target_value.load_state_dict(target_value_net_state_dict)
 
+        if self.twin_delayed:
+            target_value_net_state_dict = self.target_value2.state_dict()
+            value_net_state_dict = self.value2.state_dict()
+            for key in value_net_state_dict:
+                target_value_net_state_dict[key] = value_net_state_dict[key]*self.tau + target_value_net_state_dict[key]*(1-self.tau)
+            self.target_value2.load_state_dict(target_value_net_state_dict)
+
     def get_action(self, state):
         # Predict mean and log_std
         action = self.policy(state)
@@ -75,7 +87,7 @@ class DDPG_test:
         return action
 
     # perform an update based on a mini batch sampled from the replay memory buffer
-    def replay(self):
+    def replay(self, e):
         # do not perform an update if the replay memory buffer isn't filled enough to sample a batch
         if len(self.memory) < self.batch_size:
             return
@@ -94,9 +106,22 @@ class DDPG_test:
         with torch.no_grad():
             target_actions = self.target_policy(next_states)
             target_actions = torch.tanh(target_actions) * 2.0
+            if self.twin_delayed:
+                noise = torch.randn(target_actions.shape, device=self.device) * self.epsilon
+                clipped_noise = torch.clamp(noise, -1, 1)
+                target_actions = torch.clamp(target_actions + clipped_noise, -2.0, 2.0)
             target_q_values = self.target_value(torch.cat([next_states, target_actions], dim=1))
-            y = rewards + self.gamma * (1 - dones) * target_q_values
+            if self.twin_delayed:
+                target_q_values2 = self.target_value2(torch.cat([next_states, target_actions], dim=1))
+                min_target_q_values = torch.min(target_q_values, target_q_values2)
+                y = rewards + self.gamma * (1 - dones) * min_target_q_values
+            else:
+                y = rewards + self.gamma * (1 - dones) * target_q_values
         q_values = self.value(torch.cat([states, actions], dim=1))
+
+        if self.twin_delayed:
+            q_values2 = self.value2(torch.cat([states, actions], dim=1))
+            value2_loss = nn.HuberLoss()(q_values2, y)
 
         # current q_value vs expected q_value
         value_loss = nn.HuberLoss()(q_values, y)
@@ -106,14 +131,29 @@ class DDPG_test:
         value_loss.backward()
         self.value_optimizer.step()
 
-        # policy update
-        policy_actions = self.policy(states)
-        policy_actions = torch.tanh(policy_actions) * 2.0
-        policy_loss = -self.value(torch.cat([states, policy_actions], dim=1)).mean()
-        self.policy_optimizer.zero_grad()
-        policy_loss.backward()
-        self.policy_optimizer.step()
+        if self.twin_delayed:
+            self.value2_optimizer.zero_grad()
+            value2_loss.backward()
+            self.value2_optimizer.step()
 
+        if self.twin_delayed:
+            if e % 2 == 0:
+            # policy update
+                policy_actions = self.policy(states)
+                policy_actions = torch.tanh(policy_actions) * 2.0
+                policy_loss = -self.value(torch.cat([states, policy_actions], dim=1)).mean()
+                self.policy_optimizer.zero_grad()
+                policy_loss.backward()
+                self.policy_optimizer.step()
+        else:
+            # policy update
+            policy_actions = self.policy(states)
+            policy_actions = torch.tanh(policy_actions) * 2.0
+            policy_loss = -self.value(torch.cat([states, policy_actions], dim=1)).mean()
+            self.policy_optimizer.zero_grad()
+            policy_loss.backward()
+            self.policy_optimizer.step()
+            
     def train(self, env, val_env, episodes=500, lr_schedule = True):
         self.policy.train()
         self.value.train()
@@ -121,11 +161,13 @@ class DDPG_test:
         episode_losses = []
 
         if lr_schedule:
-            self.value_scheduler = lr_scheduler.LinearLR(self.value_optimizer, start_factor=1.0, end_factor=0.01, total_iters=episodes)
-            self.policy_scheduler = lr_scheduler.LinearLR(self.policy_optimizer, start_factor=1.0, end_factor=0.01, total_iters=episodes)
+            self.value_scheduler = lr_scheduler.LinearLR(self.value_optimizer, start_factor=1.0, end_factor=0.1, total_iters=episodes)
+            if self.twin_delayed:
+                self.value2_scheduler = lr_scheduler.LinearLR(self.value2_optimizer, start_factor=1.0, end_factor=0.1, total_iters=episodes)
+            self.policy_scheduler = lr_scheduler.LinearLR(self.policy_optimizer, start_factor=1.0, end_factor=0.1, total_iters=episodes)
 
         self.epsilon = 0.5
-        epsilon_decay = self.epsilon/episodes
+        epsilon_decay = self.epsilon/(episodes+1)
 
         print("TRAINING DDPG: ")
 
@@ -168,7 +210,7 @@ class DDPG_test:
                 total_reward += reward
                 val_total_reward += val_reward
 
-                self.replay()
+                self.replay(e)
 
             episode_losses.append(total_reward.item())
 
@@ -177,6 +219,8 @@ class DDPG_test:
             
             if lr_schedule and len(self.memory) > self.batch_size:
                 self.value_scheduler.step()
+                if self.twin_delayed:
+                    self.value2_scheduler.step()
                 self.policy_scheduler.step()
             
             if self.epsilon > 0.01:
@@ -245,6 +289,7 @@ num_layers = 3
 nbs_units = 128
 lr = 0.001
 batch_size = 128
+twin_delayed = True
 
 #for reproducibility
 torch.manual_seed(0)
@@ -256,7 +301,7 @@ env.reset(seed=0)
 val_env = gym.make("Pendulum-v1")
 val_env.reset(seed=1)
 
-ddpg_agent = DDPG_test(state_size=3, action_size=1, num_layers=num_layers, hidden_size=nbs_units, lr=lr, batch_size=batch_size)
+ddpg_agent = DDPG_test(state_size=3, action_size=1, num_layers=num_layers, hidden_size=nbs_units, lr=lr, batch_size=batch_size, twin_delayed=twin_delayed)
 ddpg_train_losses = ddpg_agent.train(env, val_env, episodes=1000)
 ddpg_agent.test(env, episodes=100)
 

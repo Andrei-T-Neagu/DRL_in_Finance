@@ -9,16 +9,16 @@ from collections import deque
 from neural_networks.FFNN import FFNN
 import torch.optim.lr_scheduler as lr_scheduler
 import gymnasium as gym
+import matplotlib.pyplot as plt
 
 # Double DQN agent
 class DoubleDQN:
-    def __init__(self, state_size, action_size, num_layers, hidden_size, gamma=0.99, epsilon=1.0, epsilon_min=0.05, epsilon_decay=0.99, lr=0.0001, batch_size=64, target_update=20, tau=0.5, double=True, dueling=True):
+    def __init__(self, state_size, action_size, num_layers, hidden_size, gamma=0.99, epsilon=1.0, epsilon_min=0.05, lr=0.0001, batch_size=64, target_update=1, tau=0.1, double=True, dueling=True):
         self.state_size = state_size
         self.action_size = action_size
         self.gamma = gamma                      # discount factor
         self.epsilon = epsilon                  # epsilon from epsilon-greedy action selection (random action taken with probability epsilon)
         self.epsilon_min = epsilon_min          # minimum value for epsilon
-        self.epsilon_decay = epsilon_decay      # decay rate of epsilon
         self.lr = lr                            # learning rate 
         self.batch_size = batch_size            # batch size    
         self.target_update = target_update      # Frequency at which target model is updated
@@ -116,9 +116,15 @@ class DoubleDQN:
     # Training loop
     def train(self, env, episodes=200, lr_schedule = True):
         self.model.train()
+        if self.double:
+            self.target_model.train()
+        
+        episode_losses = []
 
         if lr_schedule:
-            self.scheduler = lr_scheduler.LinearLR(self.optimizer, start_factor=1.0, end_factor=0.0001, total_iters=episodes)
+            self.scheduler = lr_scheduler.LinearLR(self.optimizer, start_factor=1.0, end_factor=0.1, total_iters=episodes)
+
+        epsilon_decay = (episodes-10)/episodes
 
         print("TRAINING DQN: ")
 
@@ -149,7 +155,9 @@ class DoubleDQN:
 
                 self.replay()
 
-            if e % self.target_update == 0:
+            episode_losses.append(total_reward.item())
+
+            if self.double and e % self.target_update == 0:
                 self.update_target_model()
             
             if lr_schedule and len(self.memory) > self.batch_size:
@@ -157,13 +165,17 @@ class DoubleDQN:
             
             # decay epsilon
             if self.epsilon > self.epsilon_min:
-                self.epsilon *= self.epsilon_decay
+                self.epsilon *= epsilon_decay
             
             print(f"Episode {e}/{episodes-1}, Epsilon: {self.epsilon}, Total Reward: {total_reward.item()}")
-
+        
+        return episode_losses
+    
     # Testing loop
     def test(self, env, episodes=100):
         self.model.eval()
+
+        test_losses = []
 
         print("TESTING DQN: ")
 
@@ -191,15 +203,19 @@ class DoubleDQN:
                 state = next_state
 
                 total_reward += reward
-            
-            print(f"Episode {e}/{episodes-1}, Total Reward: {total_reward.item()}")
 
-num_layers = 4
-nbs_units = 64
-lr = 0.0001
-batch_size = 64
+            test_losses.append(total_reward.item())
+
+            print(f"Episode {e}/{episodes-1}, Total Reward: {total_reward.item()}")
+        
+        return np.mean(test_losses) 
+
+num_layers = 3
+nbs_units = 128
+lr = 0.001
+batch_size = 128
 double = True
-dueling = True
+dueling = False
 
 #for reproducibility
 torch.manual_seed(0)
@@ -210,5 +226,18 @@ env = gym.make("CartPole-v1")
 env.reset(seed=0)
 
 dqn_agent = DoubleDQN(state_size=4, action_size=2, num_layers=num_layers, hidden_size=nbs_units, lr=lr, batch_size=batch_size, double=double, dueling=dueling)
-dqn_agent.train(env, episodes=1000, lr_schedule=True)
-dqn_agent.test(env, episodes=100)
+dqn_train_losses = dqn_agent.train(env, episodes=1000, lr_schedule=True)
+test_losses = dqn_agent.test(env, episodes=100)
+print("AVERAGE TEST LOSSES: ", test_losses)
+ma_size = 20
+hyperparameter_path = "/home/a_eagu/DRL_in_Finance/dqn_hyperparameters/"
+dqn_losses = np.convolve(dqn_train_losses, np.ones(ma_size), 'valid') / ma_size
+dqn_train_losses_fig = plt.figure(figsize=(12, 6))
+plt.plot(dqn_train_losses, label="Total Reward")
+plt.plot(dqn_losses, label="Total Reward (Moving Average)")
+plt.xlabel("Episodes")
+plt.ylabel("Total Reward")
+plt.legend()
+plt.title("Total Reward " + str(ma_size) + " Episode Moving Average for DQN")
+plt.savefig(hyperparameter_path + "training_losses/dqn_CARTPOLE_train_losses.png")
+plt.close()

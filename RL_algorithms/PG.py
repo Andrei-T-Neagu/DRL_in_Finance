@@ -81,7 +81,7 @@ class PG:
         torch.save(self.model.state_dict(), name)
 
     # Training loop
-    def train(self, env, BS_rsmse, episodes=1000, lr_schedule = True):
+    def train(self, env, val_env, BS_rsmse, episodes=1000, lr_schedule = True):
         """
         Training loop for policy gradient with a deterministic policy
 
@@ -96,29 +96,45 @@ class PG:
         """
         self.model.train()
         env.train()
-        
-        episode_losses = []
+        val_env.test()
+
+        episode_val_loss = []
 
         if lr_schedule:
-            self.scheduler = lr_scheduler.LinearLR(self.optimizer, start_factor=1.0, end_factor=0.0001, total_iters=episodes)
+            self.scheduler = lr_scheduler.LinearLR(self.optimizer, start_factor=1.0, end_factor=0.1, total_iters=episodes)
         
         print("TRAINING PG: ")
         for e in range(episodes):
             state = env.reset(self.batch_size)
+            val_state = val_env.reset(self.batch_size)
+
             done = torch.zeros(self.batch_size)
+            val_done = torch.zeros(self.batch_size)
+
             total_reward = torch.zeros(self.batch_size, device=self.device)
+            val_total_reward = torch.zeros(self.batch_size, device=self.device)
             i = 0
 
             while torch.all(done == 0):
                 action = self.model(state)
+                with torch.no_grad():
+                    val_action = self.model(val_state)
+
                 next_state, reward, done = env.step(action)
+                val_next_state, val_reward, val_done = val_env.step(val_action)
+
                 state = next_state
+                val_state = val_next_state
 
                 total_reward += (self.gamma ** i) * reward
+                val_total_reward += (self.gamma ** i) * val_reward
                 i += 1
 
             loss = torch.sqrt(torch.mean(torch.square(torch.where(total_reward > 0, total_reward, 0))))
-            episode_losses.append(loss.item())
+            val_loss = torch.sqrt(torch.mean(torch.square(torch.where(val_total_reward > 0, val_total_reward, 0))))
+
+            episode_val_loss.append(val_loss.item())
+            
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
@@ -127,14 +143,14 @@ class PG:
                 self.scheduler.step()
             
             if e % 100 == 0:
-                print(f"Episode {e}/{episodes-1}, Total Reward: {loss.item()}")
+                print(f"Episode {e}/{episodes-1}, Total Reward: {val_loss.item()}")
 
-            if len(episode_losses) > 10000:
-                if sum(episode_losses[:-10000])/10000 < BS_rsmse:
+            if len(episode_val_loss) > 10000:
+                if sum(episode_val_loss[:-10000])/10000 < BS_rsmse:
                     break
         
         # self.save("pg_model.pth")
-        return episode_losses
+        return episode_val_loss
 
     def test(self, env):
         """

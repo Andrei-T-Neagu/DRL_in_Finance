@@ -10,7 +10,7 @@ import torch.optim.lr_scheduler as lr_scheduler
 
 # Double DQN agent
 class DoubleDQN:
-    def __init__(self, state_size, action_size, num_layers, hidden_size, gamma=1.0, epsilon=1.0, epsilon_min=0.05, lr=0.0001, batch_size=128, target_update=20, tau=0.5, double=True, dueling=True):
+    def __init__(self, state_size, action_size, num_layers, hidden_size, gamma=1.0, epsilon=1.0, epsilon_min=0.05, lr=0.0001, batch_size=128, target_update=1, tau=0.1, double=True, dueling=False):
         self.state_size = state_size
         self.action_size = action_size
         self.gamma = gamma                      # discount factor
@@ -96,7 +96,7 @@ class DoubleDQN:
         expected_q_value = rewards + (self.gamma * target_q_value * (1 - dones))
 
         # current q_value vs expected q_value
-        loss = nn.HuberLoss()(q_value, expected_q_value)
+        loss = nn.MSELoss()(q_value, expected_q_value)
 
         # perform update step
         self.optimizer.zero_grad()
@@ -106,6 +106,8 @@ class DoubleDQN:
     # load the model
     def load(self, name):
         self.model.load_state_dict(torch.load(name))
+        if self.double:
+            self.target_model.load_state_dict(self.model.state_dict())
 
     # save the model
     def save(self, name):
@@ -119,10 +121,10 @@ class DoubleDQN:
 
         episode_val_loss = []
 
-        if lr_schedule:
-            self.scheduler = lr_scheduler.LinearLR(self.optimizer, start_factor=1.0, end_factor=0.0001, total_iters=episodes)
+        self.epsilon_decay = (episodes-10)/episodes
 
-        epsilon_decay = self.epsilon/(episodes+1)
+        if lr_schedule:
+            self.scheduler = lr_scheduler.LinearLR(self.optimizer, start_factor=1.0, end_factor=0.1, total_iters=episodes)
 
         print("TRAINING DQN: ")
 
@@ -168,7 +170,8 @@ class DoubleDQN:
                 self.scheduler.step()
             
             # decay epsilon
-            self.epsilon -= epsilon_decay
+            if self.epsilon > self.epsilon_min:
+                self.epsilon *= self.epsilon_decay
             
             if e % 100 == 0:
                 print(f"Episode {e}/{episodes-1}, Validation Loss: {val_loss.item()}")

@@ -10,26 +10,28 @@ from option_hedging.code_pytorch.DeepHedgingEnvironment import DeepHedgingEnviro
 import torch.optim.lr_scheduler as lr_scheduler
 
 class DDPG:
-    def __init__(self, config=None, state_size=3, action_size=1, num_layers=2, hidden_size=128, lr=0.0001, batch_size=128):
+    def __init__(self, config=None, state_size=3, action_size=1, num_layers=2, hidden_size=128, lr=0.0001, batch_size=128, twin_delayed=False):
         self.state_size = state_size            
         self.action_size = action_size
         
-        # if config is not None:
-        self.gamma = config.get("gamma", 1.0)                      # discount factor
-        self.lr = config.get("lr", 0.0001)                         # learning rate
-        self.batch_size = config.get("batch_size", 128)            # batch size
-        self.target_update = config.get("target_update", 20)       # Frequency at which target model is updated
-        self.tau = config.get("tau", 0.5)
-        self.num_layers = config.get("num_layers")
-        self.hidden_size = config.get("hidden_size")
-        # else:
-        #     self.gamma = 1.0                      # discount factor
-        #     self.lr = lr                         # learning rate
-        #     self.batch_size = batch_size            # batch size
-        #     self.target_update = 20      # Frequency at which target model is updated
-        #     self.tau = 0.5
-        #     self.num_layers = num_layers
-        #     self.hidden_size = hidden_size
+        if config is not None:
+            self.gamma = config.get("gamma", 1.0)                       # discount factor
+            self.lr = config.get("lr", 0.0001)                          # learning rate
+            self.batch_size = config.get("batch_size", 128)             # batch size
+            self.target_update = config.get("target_update", 20)        # Frequency at which target model is updated
+            self.tau = config.get("tau", 0.5)
+            self.num_layers = config.get("num_layers")
+            self.hidden_size = config.get("hidden_size")
+            self.twin_delayed = twin_delayed
+        else:
+            self.gamma = 1.0                                            # discount factor
+            self.lr = lr                                                # learning rate
+            self.batch_size = batch_size                                # batch size
+            self.target_update = 2                                      # Frequency at which target model is updated
+            self.tau = 0.1
+            self.num_layers = num_layers
+            self.hidden_size = hidden_size
+            self.twin_delayed = twin_delayed
         # Experience replay buffer
         self.memory = deque(maxlen=10000)
 
@@ -39,8 +41,8 @@ class DDPG:
         self.target_policy = FFNN(state_size, action_size, self.num_layers, self.hidden_size, policy=True).to(self.device)
         
         # Value network
-        self.value = FFNN(state_size + 1, 1, self.num_layers, self.hidden_size).to(self.device)
-        self.target_value = FFNN(state_size + 1, 1, self.num_layers, self.hidden_size).to(self.device)
+        self.value = FFNN(state_size + 1, 1, self.num_layers, self.hidden_size, value=False).to(self.device)
+        self.target_value = FFNN(state_size + 1, 1, self.num_layers, self.hidden_size, value=False).to(self.device)
 
         self.policy.apply(self.init_weights)
         self.value.apply(self.init_weights)
@@ -50,6 +52,13 @@ class DDPG:
 
         self.target_policy.load_state_dict(self.policy.state_dict())
         self.target_value.load_state_dict(self.value.state_dict())
+
+        if self.twin_delayed:
+            self.value2 = FFNN(state_size + 1, 1, self.num_layers, self.hidden_size, value=False).to(self.device)
+            self.value2.apply(self.init_weights)
+            self.value2_optimizer = optim.Adam(self.value2.parameters(), self.lr)
+            self.target_value2 = FFNN(state_size + 1, 1, self.num_layers, self.hidden_size, value=False).to(self.device)
+            self.target_value2.load_state_dict(self.value2.state_dict())
 
     def init_weights(self, m):
         if type(m) == nn.Linear:
@@ -74,6 +83,13 @@ class DDPG:
             target_value_net_state_dict[key] = value_net_state_dict[key]*self.tau + target_value_net_state_dict[key]*(1-self.tau)
         self.target_value.load_state_dict(target_value_net_state_dict)
 
+        if self.twin_delayed:
+            target_value_net_state_dict = self.target_value2.state_dict()
+            value_net_state_dict = self.value2.state_dict()
+            for key in value_net_state_dict:
+                target_value_net_state_dict[key] = value_net_state_dict[key]*self.tau + target_value_net_state_dict[key]*(1-self.tau)
+            self.target_value2.load_state_dict(target_value_net_state_dict)
+
     def get_action(self, state):
         # Predict mean and log_std
         action = self.policy(state)
@@ -82,7 +98,7 @@ class DDPG:
         return action
 
     # perform an update based on a mini batch sampled from the replay memory buffer
-    def replay(self):
+    def replay(self, e):
         # do not perform an update if the replay memory buffer isn't filled enough to sample a batch
         if len(self.memory) < self.batch_size:
             return
@@ -99,28 +115,56 @@ class DDPG:
         dones = torch.vstack(dones)
     
         with torch.no_grad():
-            target_actions = self.target_policy(next_states)
+            target_actions = self.target_policy(next_states) 
+            if self.twin_delayed:
+                noise = torch.randn(target_actions.shape, device=self.device) * self.epsilon
+                clipped_noise = torch.clamp(noise, -0.5, 0.5)
+                target_actions = torch.clamp(target_actions + clipped_noise, -0.5, 2.0)
             target_q_values = self.target_value(torch.cat([next_states, target_actions], dim=1))
-            y = rewards + self.gamma * (1 - dones) * target_q_values
+            if self.twin_delayed:
+                target_q_values2 = self.target_value2(torch.cat([next_states, target_actions], dim=1))
+                min_target_q_values = torch.min(target_q_values, target_q_values2)
+                y = rewards + self.gamma * (1 - dones) * min_target_q_values
+            else:    
+                y = rewards + self.gamma * (1 - dones) * target_q_values
         q_values = self.value(torch.cat([states, actions], dim=1))
+        
+        if self.twin_delayed:
+            q_values2 = self.value2(torch.cat([states, actions], dim=1))
+            value2_loss = nn.MSELoss()(q_values2, y)
 
         # current q_value vs expected q_value
-        value_loss = nn.HuberLoss()(q_values, y)
+        value_loss = nn.MSELoss()(q_values, y)
 
         # perform update step on value function
         self.value_optimizer.zero_grad()
         value_loss.backward()
         self.value_optimizer.step()
 
-        # policy update
-        policy_loss = -self.value(torch.cat([states, self.policy(states)], dim=1)).mean()
-        self.policy_optimizer.zero_grad()
-        policy_loss.backward()
-        self.policy_optimizer.step()
-
+        if self.twin_delayed:
+            self.value2_optimizer.zero_grad()
+            value2_loss.backward()
+            self.value2_optimizer.step()
+        
+        if self.twin_delayed:
+            if e % 2 == 0:
+                # policy update
+                policy_loss = -self.value(torch.cat([states, self.policy(states)], dim=1)).mean()
+                self.policy_optimizer.zero_grad()
+                policy_loss.backward()
+                self.policy_optimizer.step()
+        else:
+            # policy update
+                policy_loss = -self.value(torch.cat([states, self.policy(states)], dim=1)).mean()
+                self.policy_optimizer.zero_grad()
+                policy_loss.backward()
+                self.policy_optimizer.step()
+                
     def train(self, env, val_env, episodes=1000, lr_schedule = True):
         self.policy.train()
         self.value.train()
+        if self.twin_delayed:
+            self.value2.train()
         
         env.train()
         val_env.test()
@@ -128,8 +172,10 @@ class DDPG:
         episode_val_loss = []
 
         if lr_schedule:
-            self.value_scheduler = lr_scheduler.LinearLR(self.value_optimizer, start_factor=1.0, end_factor=0.0001, total_iters=episodes)
-            self.policy_scheduler = lr_scheduler.LinearLR(self.policy_optimizer, start_factor=1.0, end_factor=0.0001, total_iters=episodes)
+            self.value_scheduler = lr_scheduler.LinearLR(self.value_optimizer, start_factor=1.0, end_factor=0.1, total_iters=episodes)
+            if self.twin_delayed:
+                self.value2_scheduler = lr_scheduler.LinearLR(self.value2_optimizer, start_factor=1.0, end_factor=0.1, total_iters=episodes)
+            self.policy_scheduler = lr_scheduler.LinearLR(self.policy_optimizer, start_factor=1.0, end_factor=0.1, total_iters=episodes)
 
         self.epsilon = 0.5
         epsilon_decay = self.epsilon/(episodes+1)
@@ -164,7 +210,7 @@ class DDPG:
                 total_reward += reward
                 val_total_reward += val_reward
 
-                self.replay()
+                self.replay(e)
             val_loss = torch.sqrt(torch.mean(torch.square(torch.where(val_total_reward > 0, val_total_reward, 0))))
 
             episode_val_loss.append(val_loss.item())
@@ -174,6 +220,8 @@ class DDPG:
             
             if lr_schedule and len(self.memory) > self.batch_size:
                 self.value_scheduler.step()
+                if self.twin_delayed:
+                    self.value2_scheduler.step()
                 self.policy_scheduler.step()
             
             self.epsilon -= epsilon_decay
@@ -247,10 +295,22 @@ class DDPG:
         return actions.flatten(1), rewards.flatten(), rsmse.item()
 
     def save(self, name):
-        torch.save({'policy_state_dict': self.policy.state_dict(),
-                    'value_state_dict': self.value.state_dict()}, name)
-
+        if self.twin_delayed:
+            torch.save({'policy_state_dict': self.policy.state_dict(),
+                        'value_state_dict': self.value.state_dict(),
+                        'value2_state_dict': self.value2.state_dict(),}, name)
+        else:
+            torch.save({'policy_state_dict': self.policy.state_dict(),
+                        'value_state_dict': self.value.state_dict(),}, name)
+            
     def load(self, name):
         checkpoint = torch.load(name)
         self.policy.load_state_dict(checkpoint['policy_state_dict'])
         self.value.load_state_dict(checkpoint['value_state_dict'])
+        
+        self.target_policy.load_state_dict(self.policy.state_dict())
+        self.target_value.load_state_dict(self.value.state_dict())
+
+        if self.twin_delayed:
+            self.value2.load_state_dict(checkpoint['value2_state_dict'])
+            self.target_value2.load_state_dict(self.value2.state_dict())

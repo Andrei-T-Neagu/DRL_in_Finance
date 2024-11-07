@@ -85,8 +85,8 @@ class PPO:
         episode_val_loss = []
 
         if lr_schedule:
-            self.value_scheduler = lr_scheduler.LinearLR(self.value_optimizer, start_factor=1.0, end_factor=0.0001, total_iters=episodes)
-            self.policy_scheduler = lr_scheduler.LinearLR(self.policy_optimizer, start_factor=1.0, end_factor=0.0001, total_iters=episodes)
+            self.value_scheduler = lr_scheduler.LinearLR(self.value_optimizer, start_factor=1.0, end_factor=0.1, total_iters=episodes)
+            self.policy_scheduler = lr_scheduler.LinearLR(self.policy_optimizer, start_factor=1.0, end_factor=0.1, total_iters=episodes)
         
         for episode in range(episodes):
             state = env.reset(self.batch_size)
@@ -173,7 +173,7 @@ class PPO:
 
                 # Value loss
                 value_pred = self.value(states).squeeze(-1)
-                loss_value = nn.HuberLoss()(value_pred, returns)
+                loss_value = nn.MSELoss()(value_pred, returns)
 
                 # # Combine losses and calculate the surrogate loss
                 # surrogate_loss = loss_policy + 0.5 * loss_value + 0.01 * dist_entropy
