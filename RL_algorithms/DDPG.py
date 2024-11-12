@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from ray import train
 import numpy as np
 import random
 from collections import deque
@@ -14,28 +13,22 @@ class DDPG:
         self.state_size = state_size            
         self.action_size = action_size
         
-        if config is not None:
-            self.gamma = config.get("gamma", 1.0)                       # discount factor
-            self.lr = config.get("lr", 0.0001)                          # learning rate
-            self.batch_size = config.get("batch_size", 128)             # batch size
-            self.target_update = config.get("target_update", 20)        # Frequency at which target model is updated
-            self.tau = config.get("tau", 0.5)
-            self.num_layers = config.get("num_layers")
-            self.hidden_size = config.get("hidden_size")
-            self.twin_delayed = twin_delayed
-        else:
-            self.gamma = 1.0                                            # discount factor
-            self.lr = lr                                                # learning rate
-            self.batch_size = batch_size                                # batch size
-            self.target_update = 2                                      # Frequency at which target model is updated
-            self.tau = 0.1
-            self.num_layers = num_layers
-            self.hidden_size = hidden_size
-            self.twin_delayed = twin_delayed
+        self.gamma = 1.0                                            # discount factor
+        
+        self.lr = config.get("lr", 0.0001)                          # learning rate
+        self.batch_size = config.get("batch_size", 128)             # batch size
+        self.num_layers = config.get("num_layers")
+        self.hidden_size = config.get("hidden_size")
+        
+        self.twin_delayed = twin_delayed
+        self.target_update = 2 if self.twin_delayed else 1          # Frequency at which target model is updated
+        self.tau = 0.1
+        
         # Experience replay buffer
         self.memory = deque(maxlen=10000)
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # self.device = torch.device('cpu')
         # Policy network
         self.policy = FFNN(state_size, action_size, self.num_layers, self.hidden_size, policy=True).to(self.device)
         self.target_policy = FFNN(state_size, action_size, self.num_layers, self.hidden_size, policy=True).to(self.device)
@@ -160,14 +153,14 @@ class DDPG:
                 policy_loss.backward()
                 self.policy_optimizer.step()
                 
-    def train(self, env, val_env, episodes=1000, lr_schedule = True):
+    def train(self, env, val_env, BS_rsmse, episodes=1000, lr_schedule = True):
         self.policy.train()
         self.value.train()
         if self.twin_delayed:
             self.value2.train()
         
         env.train()
-        val_env.test()
+        val_env.train()
 
         episode_val_loss = []
 
@@ -229,6 +222,10 @@ class DDPG:
             if e % 100 == 0:
                 print(f"Episode {e}/{episodes-1}, Validation Loss: {val_loss.item()}")
             
+            if len(episode_val_loss) > 50000:
+                if sum(episode_val_loss[-10000:])/10000 < BS_rsmse:
+                    break
+
         # self.save("ddpg_model.pth")
         return episode_val_loss
 
@@ -289,8 +286,6 @@ class DDPG:
                 print(f"Batch: {batch}/{batches-1}, Total Reward: {loss.item()}")
 
         rsmse = torch.sqrt(torch.mean(torch.square(torch.where(total_val_reward > 0, total_val_reward, 0))))
-        
-        train.report({"rsmse": rsmse.item()})
         
         return actions.flatten(1), rewards.flatten(), rsmse.item()
 

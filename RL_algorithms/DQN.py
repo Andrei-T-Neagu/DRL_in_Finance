@@ -10,14 +10,18 @@ import torch.optim.lr_scheduler as lr_scheduler
 
 # Double DQN agent
 class DoubleDQN:
-    def __init__(self, state_size, action_size, num_layers, hidden_size, gamma=1.0, epsilon=1.0, epsilon_min=0.05, lr=0.0001, batch_size=128, target_update=1, tau=0.1, double=True, dueling=False):
+    def __init__(self, config, state_size, action_size, epsilon=1.0, epsilon_min=0.05, target_update=1, tau=0.1, double=True, dueling=False):
         self.state_size = state_size
         self.action_size = action_size
-        self.gamma = gamma                      # discount factor
+        self.gamma = 1.0                      # discount factor
         self.epsilon = epsilon                  # epsilon from epsilon-greedy action selection (random action taken with probability epsilon)
         self.epsilon_min = epsilon_min          # minimum value for epsilon
-        self.lr = lr                            # learning rate 
-        self.batch_size = batch_size            # batch size    
+
+        self.lr = config.get("lr", 0.0001)                          # learning rate
+        self.batch_size = config.get("batch_size", 128)             # batch size
+        self.num_layers = config.get("num_layers")
+        self.hidden_size = config.get("hidden_size")
+
         self.target_update = target_update      # Frequency at which target model is updated
         # Experience replay buffer
         self.memory = deque(maxlen=10000)
@@ -25,11 +29,12 @@ class DoubleDQN:
 
         # Main and target networks
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.model = FFNN(in_features=state_size, out_features=action_size, num_layers=num_layers, hidden_size=hidden_size, dueling=dueling).to(self.device)
+        # self.device = torch.device('cpu')
+        self.model = FFNN(in_features=state_size, out_features=action_size, num_layers=self.num_layers, hidden_size=self.hidden_size, dueling=dueling).to(self.device)
         self.model.apply(self.init_weights)
         
-        self.target_model = FFNN(in_features=state_size, out_features=action_size, num_layers=num_layers, hidden_size=hidden_size, dueling=dueling).to(self.device)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
+        self.target_model = FFNN(in_features=state_size, out_features=action_size, num_layers=self.num_layers, hidden_size=self.hidden_size, dueling=dueling).to(self.device)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
         self.tau = tau
         # Synchronize target model with main model
         self.target_model.load_state_dict(self.model.state_dict())
@@ -114,10 +119,10 @@ class DoubleDQN:
         torch.save(self.model.state_dict(), name)
 
 # Training loop
-    def train(self, env, val_env, episodes=200, lr_schedule = True):
+    def train(self, env, val_env, BS_rsmse, episodes=200, lr_schedule = True):
         self.model.train()
         env.train()
-        val_env.test()
+        val_env.train()
 
         episode_val_loss = []
 
@@ -172,9 +177,13 @@ class DoubleDQN:
             # decay epsilon
             if self.epsilon > self.epsilon_min:
                 self.epsilon *= self.epsilon_decay
-            
+        
             if e % 100 == 0:
                 print(f"Episode {e}/{episodes-1}, Validation Loss: {val_loss.item()}")
+
+            if len(episode_val_loss) > 50000:
+                if sum(episode_val_loss[-10000:])/10000 < BS_rsmse:
+                    break
 
         # self.save("dqn_model.pth")
         return episode_val_loss

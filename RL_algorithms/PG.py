@@ -25,19 +25,23 @@ class PG:
     Returns:
     - None
     """
-    def __init__(self, state_size, action_size, num_layers, hidden_size, gamma = 1.0, lr=0.0001, batch_size=512):
+    def __init__(self, config, state_size, action_size, gamma = 1.0):
         self.state_size = state_size
         self.action_size = action_size
 
-        self.lr = lr                            # learning rate 
-        self.batch_size = batch_size            # batch size    
+        self.lr = config.get("lr")                          # learning rate
+        self.batch_size = config.get("batch_size")             # batch size
+        self.num_layers = config.get("num_layers")
+        self.hidden_size = config.get("hidden_size")
+ 
         self.gamma = gamma                      # Discount factor for the reward
         # Main and target networks
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.model = FFNN(in_features=state_size, out_features=action_size, num_layers=num_layers, hidden_size=hidden_size).to(self.device)
+        # self.device = torch.device('cpu')
+        self.model = FFNN(in_features=state_size, out_features=action_size, num_layers=self.num_layers, hidden_size=self.hidden_size).to(self.device)
         self.model.apply(self.init_weights)
         
-        self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 
     def init_weights(self, m):
         """
@@ -96,7 +100,7 @@ class PG:
         """
         self.model.train()
         env.train()
-        val_env.test()
+        val_env.train()
 
         episode_val_loss = []
 
@@ -145,11 +149,10 @@ class PG:
             if e % 100 == 0:
                 print(f"Episode {e}/{episodes-1}, Total Reward: {val_loss.item()}")
 
-            if len(episode_val_loss) > 10000:
-                if sum(episode_val_loss[:-10000])/10000 < BS_rsmse:
+            if len(episode_val_loss) > 50000:
+                if sum(episode_val_loss[-10000:])/10000 < BS_rsmse:
                     break
         
-        # self.save("pg_model.pth")
         return episode_val_loss
 
     def test(self, env):

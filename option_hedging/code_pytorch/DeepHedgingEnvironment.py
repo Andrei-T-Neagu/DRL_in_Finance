@@ -31,6 +31,7 @@ class DeepHedgingEnvironment():
         self.trans_costs = trans_costs
         
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # self.device = torch.device('cpu')
         self.discretized = discretized                                                                      # For if the action space is discretized
         self.discretized_actions = torch.arange(start=-0.5, end=2.0, step=0.05, device=self.device)
 
@@ -161,8 +162,8 @@ class DeepHedgingEnvironment():
             self.input_t = torch.stack((self.dt * self.t * torch.ones(self.batch_size, device=self.device), self.S_t, self.delta_t_next, (self.V_t/self.S_0)*10), dim=1)
         
         self.t += 1                                                             # iterate time step
-        if self.t == self.N:                                                  # if t is the final time step
-            self.done = torch.ones(self.batch_size, device=self.device)                             #   set done to be True
+        if self.t == self.N:                                                    # if t is the final time step
+            self.done = torch.ones(self.batch_size, device=self.device)         #   set done to be True
             self.path += 1                                                      #   iterate path index
             self.t = 0                                                          #   set time step to 0
             if (self.path)*self.batch_size > self.dataset.shape[0]-1:           #   if path is the final path in the dataset

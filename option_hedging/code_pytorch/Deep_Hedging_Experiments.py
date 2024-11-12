@@ -1,3 +1,4 @@
+import os
 import datetime as datetime
 import math
 import random
@@ -6,9 +7,9 @@ import pandas as pd
 import torch
 import torch.nn as nn 
 import torch.nn.functional as F
-from ray import tune
-from ray.tune.schedulers import ASHAScheduler
+from ray import tune, train
 import ray
+from ray.train import Checkpoint
 import matplotlib.pyplot as plt
 import Utils_general
 import DeepHedgingEnvironment
@@ -20,12 +21,17 @@ from data_generation_processes.GARCH import GARCH
 from scipy.stats import ttest_ind
 from scipy.stats import f
 import yfinance as yf
+import pickle
+import tempfile
+import shutil
+
 global_path_prefix = "/home/a_eagu/DRL_in_Finance/option_hedging/code_pytorch/"
 
 nbs_point_traj = 13
 T = 252/252
 
-train_size = 2**20
+train_size = 2**19
+val_size = 2**17
 test_size = 2**17
 
 r_borrow = 0
@@ -37,10 +43,14 @@ option_type = "call"
 position_type = "short"
 strike = 100
 
-batch_size = 128
-num_layers = 3
-nbs_units = 128
-lr = 0.0001
+config={
+    "lr": 0.001,
+    "batch_size": 64,
+    "num_layers": 2,
+    "hidden_size": 64,
+}
+
+# batch_size=64,hidden_size=256,lr=0.0010,num_layers=4
 
 prepro_stock = "log-moneyness"
 nbs_shares = 1
@@ -50,7 +60,7 @@ stock = "^GSPC"
 
 start="2000-11-15"
 end="2024-10-15"
-interval= "1mo"              # Valid intervals: [1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo]
+interval= "1wk"              # Valid intervals: [1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo]
 garch_type="gjr"
 
 # neural network type parameters
@@ -109,15 +119,18 @@ def generate_garch_dataset(dataset_type="train_set", size=train_size):
     torch.save(dataset, global_path_prefix + str(dataset_type))
 
 """Training the garch model and generating the datasets"""
-# train_garch()
-# generate_garch_dataset(dataset_type="train_set", size=train_size)
-# generate_garch_dataset(dataset_type="test_set", size=test_size)
+train_garch()
+generate_garch_dataset(dataset_type="train_set", size=train_size)
+generate_garch_dataset(dataset_type="val_set", size=val_size)
+generate_garch_dataset(dataset_type="test_set", size=test_size)
 
 # Select the device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# device = torch.device('cpu')
 
 # Load the training and testing datasets
 train_set = torch.load(global_path_prefix + "train_set", weights_only=True)
+val_set = torch.load(global_path_prefix + "val_set", weights_only=True)
 test_set = torch.load(global_path_prefix + "test_set", weights_only=True)
 
 # For reproducibility
@@ -160,25 +173,32 @@ deep_hedging_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj,
                                                                  nbs_shares, light, train_set=train_set, test_set=test_set, discretized=False)
 
 validation_deep_hedging_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                                     nbs_shares, light, train_set=train_set, test_set=test_set, discretized=False)
+                                                                     nbs_shares, light, train_set=val_set, test_set=test_set, discretized=False)
 
-lr_list = [0.001, 0.0001, 0.00001]
-num_layers_list = [4, 3, 2]
-nbs_units_list = [256, 128, 64]
-batch_size_list = [256, 128, 64]
+episodes = 1000
+ma_size = 100
 
-episodes = 20000
-ma_size = 1000
+start_time = datetime.datetime.now()
 
 """Train and test PG"""
 
+# hyperparameter_path = "/home/a_eagu/DRL_in_Finance/pg_hyperparameters/"
+
 # deep_hedging_env.discretized = False
-# pg_agent = PG.PG(state_size=state_size, action_size=1, num_layers=num_layers, hidden_size=nbs_units, lr=lr, batch_size=batch_size)
-# pg_train_losses = pg_agent.train(deep_hedging_env, validation_deep_hedging_env, episodes=episodes, BS_rsmse=rsmse_DH_leland)
+# validation_deep_hedging_env.discretized = False
+# pg_agent = PG.PG(config=config, state_size=state_size, action_size=1)
+# pg_train_losses = pg_agent.train(deep_hedging_env, validation_deep_hedging_env, episodes=episodes, BS_rsmse=rsmse_DH_leland, lr_schedule=lr_schedule)
 # pg_actions, pg_rewards, pg_rsmse = pg_agent.test(deep_hedging_env)
 
-# hyperparameter_path = "/home/a_eagu/DRL_in_Finance/pg_hyperparameters/"
-# pg_losses = np.convolve(pg_train_losses[1000:], np.ones(ma_size), 'valid') / ma_size
+# print("TIME TAKEN: ", datetime.datetime.now() - start_time)
+
+# with open(hyperparameter_path + 'pg_train_losses.pickle', 'wb') as file:
+#     pickle.dump(pg_train_losses, file)
+
+# with open(hyperparameter_path + 'pg_train_losses.pickle', 'rb') as file:
+#     pg_train_losses = pickle.load(file)
+
+# pg_losses = np.convolve(pg_train_losses, np.ones(ma_size), 'valid') / ma_size
 # pg_train_losses_fig = plt.figure(figsize=(12, 6))
 # plt.plot(pg_losses, label="RSMSE")
 # plt.xlabel("Episodes")
@@ -187,7 +207,7 @@ ma_size = 1000
 # plt.legend()
 # plt.grid(which="both")
 # plt.title("RSMSE " + str(ma_size) + " Episode Moving Average for PG")
-# plt.savefig(hyperparameter_path + "training_losses/pg_train_losses.png")
+# plt.savefig(hyperparameter_path + "pg_train_losses.png")
 # plt.close()
 
 # print("POLICY GRADIENT RSMSE: " + str(pg_rsmse))
@@ -202,51 +222,53 @@ ma_size = 1000
 
 """Train and test DQN"""
 
-deep_hedging_env.discretized = True
-validation_deep_hedging_env.discretized = True
-action_size = deep_hedging_env.discretized_actions.shape[0]
-dqn_agent = DQN.DoubleDQN(state_size=state_size, action_size=action_size, num_layers=num_layers, hidden_size=nbs_units, lr=lr, batch_size=batch_size)
-dqn_train_losses = dqn_agent.train(deep_hedging_env, validation_deep_hedging_env, episodes=episodes, lr_schedule=True)
-dqn_actions, dqn_rewards, dqn_rsmse = dqn_agent.test(deep_hedging_env)
+# deep_hedging_env.discretized = True
+# validation_deep_hedging_env.discretized = True
+# action_size = deep_hedging_env.discretized_actions.shape[0]
+# dqn_agent = DQN.DoubleDQN(config=config, state_size=state_size, action_size=action_size)
+# dqn_train_losses = dqn_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
+# dqn_actions, dqn_rewards, dqn_rsmse = dqn_agent.test(deep_hedging_env)
 
-hyperparameter_path = "/home/a_eagu/DRL_in_Finance/dqn_hyperparameters/"
-dqn_losses = np.convolve(dqn_train_losses, np.ones(ma_size), 'valid') / ma_size
-dqn_train_losses_fig = plt.figure(figsize=(12, 6))
-plt.plot(dqn_losses, label="RSMSE")
-plt.xlabel("Episodes")
-plt.ylabel("RSMSE")
-plt.legend()
-plt.title("RSMSE " + str(ma_size) + " Episode Moving Average for DQN")
-plt.savefig(hyperparameter_path + "training_losses/dqn_train_losses.png")
-plt.close()
+# hyperparameter_path = "/home/a_eagu/DRL_in_Finance/dqn_hyperparameters/"
+# dqn_losses = np.convolve(dqn_train_losses, np.ones(ma_size), 'valid') / ma_size
+# dqn_train_losses_fig = plt.figure(figsize=(12, 6))
+# plt.plot(dqn_losses, label="RSMSE")
+# plt.xlabel("Episodes")
+# plt.ylabel("RSMSE")
+# plt.legend()
+# plt.grid(which="both")
+# plt.title("RSMSE " + str(ma_size) + " Episode Moving Average for DQN")
+# plt.savefig(hyperparameter_path + "dqn_train_losses.png")
+# plt.close()
 
-print("DQN RSMSE: " + str(dqn_rsmse))
+# print("DQN RSMSE: " + str(dqn_rsmse))
 
-dqn_actions = dqn_actions.cpu().detach().numpy()
-dqn_rewards = dqn_rewards.cpu().detach().numpy()
+# dqn_actions = dqn_actions.cpu().detach().numpy()
+# dqn_rewards = dqn_rewards.cpu().detach().numpy()
 
-print(" ----------------- ")
-print(" DQN Results")
-print(" ----------------- ")
-Utils_general.print_stats(dqn_rewards, dqn_actions, "RSMSE", "DQN", V_0)
+# print(" ----------------- ")
+# print(" DQN Results")
+# print(" ----------------- ")
+# Utils_general.print_stats(dqn_rewards, dqn_actions, "RSMSE", "DQN", V_0)
 
 """Train and test PPO"""
 
 # deep_hedging_env.discretized = False
 # validation_deep_hedging_env.discretized = False
-# ppo_agent = PPO.PPO(state_size=state_size, action_size=1, num_layers=num_layers, hidden_size=nbs_units, lr=lr, batch_size=batch_size)
-# ppo_train_losses = ppo_agent.train(deep_hedging_env, validation_deep_hedging_env, episodes=episodes, lr_schedule=True)
+# ppo_agent = PPO.PPO(config=config, state_size=state_size, action_size=1)
+# ppo_train_losses = ppo_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
 # ppo_actions, ppo_rewards, ppo_rsmse = ppo_agent.test(deep_hedging_env)
 
 # hyperparameter_path = "/home/a_eagu/DRL_in_Finance/ppo_hyperparameters/"
-# ppo_losses = np.convolve(ppo_train_losses, np.ones(ma_size), 'valid') / ma_size
+# ppo_losses = np.convolve(ppo_train_losses[200:], np.ones(ma_size), 'valid') / ma_size
 # ppo_train_losses_fig = plt.figure(figsize=(12, 6))
 # plt.plot(ppo_losses, label="RSMSE")
 # plt.xlabel("Episodes")
 # plt.ylabel("RSMSE")
 # plt.legend()
+# plt.grid(which="both")
 # plt.title("RSMSE " + str(ma_size) + " Episode Moving Average for PPO")
-# plt.savefig(hyperparameter_path + "training_losses/ppo_train_losses.png")
+# plt.savefig(hyperparameter_path + "ppo_train_losses.png")
 # plt.close()
 
 # print("PROXIMAL POLICY OPTIMIZATION RSMSE: " + str(ppo_rsmse))
@@ -263,8 +285,8 @@ Utils_general.print_stats(dqn_rewards, dqn_actions, "RSMSE", "DQN", V_0)
 
 # deep_hedging_env.discretized = False
 # validation_deep_hedging_env.discretized = False
-# ddpg_agent = DDPG.DDPG(state_size=state_size, action_size=1, num_layers=num_layers, hidden_size=nbs_units, lr=lr, batch_size=batch_size, twin_delayed=True)
-# ddpg_train_losses = ddpg_agent.train(deep_hedging_env, validation_deep_hedging_env, episodes=episodes, lr_schedule=True)
+# ddpg_agent = DDPG.DDPG(config=config, state_size=state_size, action_size=1, twin_delayed=True)
+# ddpg_train_losses = ddpg_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
 # ddpg_actions, ddpg_rewards, ddpg_rsmse = ddpg_agent.test(deep_hedging_env)
 
 # hyperparameter_path = "/home/a_eagu/DRL_in_Finance/ddpg_hyperparameters/"
@@ -274,8 +296,9 @@ Utils_general.print_stats(dqn_rewards, dqn_actions, "RSMSE", "DQN", V_0)
 # plt.xlabel("Episodes")
 # plt.ylabel("RSMSE")
 # plt.legend()
+# plt.grid(which="both")
 # plt.title("RSMSE " + str(ma_size) + " Episode Moving Average for DDPG")
-# plt.savefig(hyperparameter_path + "training_losses/ddpg_train_losses.png")
+# plt.savefig(hyperparameter_path + "ddpg_train_losses.png")
 # plt.close()
 
 # print("DDPG OPTIMIZATION RSMSE: " + str(ddpg_rsmse))
@@ -290,47 +313,202 @@ Utils_general.print_stats(dqn_rewards, dqn_actions, "RSMSE", "DQN", V_0)
 
 """HYPERPARAMETER TUNING USING RAYTUNE"""
 
-# env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-#                                                                                      nbs_shares, light, train_set=train_set, test_set=test_set, discretized=False)
-# val_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-#                                                                                              nbs_shares, light, train_set=train_set, test_set=test_set, discretized=False)
+env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
+                                                    nbs_shares, light, train_set=train_set, test_set=test_set, discretized=False)
+val_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
+                                                        nbs_shares, light, train_set=val_set, test_set=test_set, discretized=False)
 
-# def train_ddpg(config):
-#     torch.manual_seed(0)
-#     random.seed(0)
-#     np.random.seed(0)
+configs={
+    "lr": tune.grid_search([0.001, 0.0001, 0.00001]),
+    "batch_size": tune.grid_search([64, 128, 256]),
+    "num_layers": tune.grid_search([2, 3, 4]),
+    "hidden_size": tune.grid_search([64, 128, 256])
+}
+
+def train_pg(config):
+    torch.manual_seed(0)
+    random.seed(0)
+    np.random.seed(0)
+    hyperparameter_path = "/home/a_eagu/DRL_in_Finance/pg_hyperparameters/"
+
+    env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
+                                                        nbs_shares, light, train_set=train_set, test_set=test_set, discretized=False)
+    val_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
+                                                            nbs_shares, light, train_set=val_set, test_set=test_set, discretized=False)
     
-#     action_size = 1
+    model = PG.PG(config, state_size, action_size=1)
+    train_losses = model.train(env, val_env, BS_rsmse=rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
     
-#     model = DDPG.DDPG(config, state_size, action_size)
-#     model.train(env, val_env, episodes=100000)
-#     model.test(val_env)
+    config_str = "lr=" + str(model.lr) + "|batch_size=" + str(model.batch_size) + "|num_layers=" + str(model.num_layers) + "|hidden_size=" + str(model.hidden_size)
+    with open(hyperparameter_path + "pg_train_losses_" + config_str + ".pickle", 'wb') as file:
+        pickle.dump(train_losses, file)
+    
+    _, _, rsmse = model.test(val_env)
 
-# config={
-#     "lr": tune.grid_search([0.0001, 0.00001, 0.000001]),
-#     "batch_size": tune.grid_search([64, 128, 256]),
-#     "num_layers": tune.grid_search([2, 3, 4]),
-#     "hidden_size": tune.grid_search([64, 128, 256])
-# }
+    with tempfile.TemporaryDirectory() as temp_checkpoint_dir:
+        # This saves the model to the trial directory
+        model.save(os.path.join(temp_checkpoint_dir, "pg_model.pth"))
+        checkpoint = Checkpoint.from_directory(temp_checkpoint_dir)
 
-# ray.init(_temp_dir="/home/a_eagu/DRL_in_Finance/temp")
-# trainable_with_gpu = tune.with_resources(train_ddpg, {"gpu": 0.02})
+        # Send the current training result back to Tune
+        train.report({"rsmse": rsmse}, checkpoint=checkpoint)
 
-# tuner = tune.Tuner(
-#     trainable_with_gpu,
-#     param_space=config,
-#     tune_config=tune.TuneConfig(
-#         scheduler=ASHAScheduler(metric="rsmse", mode="min"),
-#     ),
-# )
+def train_dqn(config):
+    torch.manual_seed(0)
+    random.seed(0)
+    np.random.seed(0)
+    hyperparameter_path = "/home/a_eagu/DRL_in_Finance/dqn_hyperparameters/"
+    
+    env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
+                                                        nbs_shares, light, train_set=train_set, test_set=test_set, discretized=True)
+    val_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
+                                                            nbs_shares, light, train_set=val_set, test_set=test_set, discretized=True)
 
-# results = tuner.fit()
+    action_size = env.discretized_actions.shape[0]
 
-# # Get a dataframe of results for a specific score or mode
-# df = results.get_dataframe(filter_metric="rsmse", filter_mode="min").sort_values(by=["rsmse"])
-# with open("/home/a_eagu/DRL_in_Finance/raytune_ddpg.txt", "w") as raytune_file:
-#     raytune_file.write(df.to_string())
+    model = DQN.DoubleDQN(config, state_size, action_size=action_size)
+    train_losses = model.train(env, val_env, BS_rsmse=rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
+    
+    config_str = "lr=" + str(model.lr) + "|batch_size=" + str(model.batch_size) + "|num_layers=" + str(model.num_layers) + "|hidden_size=" + str(model.hidden_size)
+    with open(hyperparameter_path + "dqn_train_losses_" + config_str + ".pickle", 'wb') as file:
+        pickle.dump(train_losses, file)
+    
+    _, _, rsmse = model.test(val_env)
+    
+    with tempfile.TemporaryDirectory() as temp_checkpoint_dir:
+        # This saves the model to the trial directory
+        model.save(os.path.join(temp_checkpoint_dir, "dqn_model.pth"))
+        checkpoint = Checkpoint.from_directory(temp_checkpoint_dir)
 
+        # Send the current training result back to Tune
+        train.report({"rsmse": rsmse}, checkpoint=checkpoint)
+
+def train_ppo(config):
+    torch.manual_seed(0)
+    random.seed(0)
+    np.random.seed(0)
+    hyperparameter_path = "/home/a_eagu/DRL_in_Finance/ppo_hyperparameters/"
+
+    env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
+                                                        nbs_shares, light, train_set=train_set, test_set=test_set, discretized=False)
+    val_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
+                                                            nbs_shares, light, train_set=val_set, test_set=test_set, discretized=False)
+
+    model = PPO.PPO(config, state_size, action_size=1)
+    train_losses = model.train(env, val_env, BS_rsmse=rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
+    
+    config_str = "lr=" + str(model.lr) + "|batch_size=" + str(model.batch_size) + "|num_layers=" + str(model.num_layers) + "|hidden_size=" + str(model.hidden_size)
+    with open(hyperparameter_path + "ppo_train_losses_" + config_str + ".pickle", 'wb') as file:
+        pickle.dump(train_losses, file)
+    
+    _, _, rsmse = model.test(val_env)
+
+    with tempfile.TemporaryDirectory() as temp_checkpoint_dir:
+        # This saves the model to the trial directory
+        model.save(os.path.join(temp_checkpoint_dir, "ppo_model.pth"))
+        checkpoint = Checkpoint.from_directory(temp_checkpoint_dir)
+
+        # Send the current training result back to Tune
+        train.report({"rsmse": rsmse}, checkpoint=checkpoint)
+
+def train_ddpg(config):
+    torch.manual_seed(0)
+    random.seed(0)
+    np.random.seed(0)
+    hyperparameter_path = "/home/a_eagu/DRL_in_Finance/ddpg_hyperparameters/"
+
+    env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
+                                                        nbs_shares, light, train_set=train_set, test_set=test_set, discretized=False)
+    val_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
+                                                            nbs_shares, light, train_set=val_set, test_set=test_set, discretized=False)
+
+    model = DDPG.DDPG(config, state_size, action_size=1)
+    train_losses = model.train(env, val_env, BS_rsmse=rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
+    
+    config_str = "lr=" + str(model.lr) + "|batch_size=" + str(model.batch_size) + "|num_layers=" + str(model.num_layers) + "|hidden_size=" + str(model.hidden_size)
+    with open(hyperparameter_path + "ddpg_train_losses_" + config_str + ".pickle", 'wb') as file:
+        pickle.dump(train_losses, file)
+    
+    _, _, rsmse = model.test(val_env)
+
+    with tempfile.TemporaryDirectory() as temp_checkpoint_dir:
+        # This saves the model to the trial directory
+        model.save(os.path.join(temp_checkpoint_dir, "ddpg_model.pth"))
+        checkpoint = Checkpoint.from_directory(temp_checkpoint_dir)
+
+        # Send the current training result back to Tune
+        train.report({"rsmse": rsmse}, checkpoint=checkpoint)
+
+def raytune(train_func, configs, model_name):
+    ray.init(_temp_dir="/home/a_eagu/DRL_in_Finance/temp/")
+    trainable_with_gpu = tune.with_resources(train_func, {"gpu": 0.05})
+
+    tuner = tune.Tuner(
+        trainable_with_gpu,
+        param_space=configs,
+        tune_config=tune.TuneConfig(
+            metric="rsmse",
+            mode="min",
+        ),
+    )
+
+    results = tuner.fit()
+
+    # Get a dataframe of results for a specific score or mode
+    df = results.get_dataframe(filter_metric="rsmse", filter_mode="min").sort_values(by=["rsmse"])
+    with open("/home/a_eagu/DRL_in_Finance/" + model_name + "_hyperparameters/raytune_" + model_name + ".txt", "w") as raytune_file:
+        raytune_file.write(df.to_string())
+
+    best_result = results.get_best_result()  # Get best result object
+    best_config = best_result.config  # Get best trial's hyperparameters
+    best_logdir = best_result.path  # Get best trial's result directory
+    best_checkpoint = best_result.checkpoint  # Get best trial's best checkpoint
+
+    print("best_result: ", best_result)
+    print("best_config: ", best_config)
+    print("best_logdir: ", best_logdir)
+    print("best_checkpoint: ", best_checkpoint)
+
+    shutil.copyfile(best_checkpoint.path + "/" + model_name + "_model.pth", "/home/a_eagu/DRL_in_Finance/" + model_name + "_hyperparameters/" + model_name + "_model.pth")
+    
+    return best_config
+
+# best_config = raytune(train_func=train_pg, configs=configs, model_name="pg")
+
+best_config = raytune(train_func=train_ppo, configs=configs, model_name="ppo")
+
+model = PPO.PPO(best_config, state_size, action_size=1)
+model.load("/home/a_eagu/DRL_in_Finance/ppo_hyperparameters/ppo_model.pth")
+_, _, rsmse = model.test(val_env)
+
+print("rsmse: ", rsmse)
+
+# model = PG.PG(best_config, state_size, action_size=1)
+# model.load("/home/a_eagu/DRL_in_Finance/pg_hyperparameters/pg_model.pth")
+# _, _, rsmse = model.test(val_env)
+
+# print("rsmse: ", rsmse)
+
+# config_str = "lr=" + str(best_config["lr"]) + "|batch_size=" + str(best_config["batch_size"]) + "|num_layers=" + str(best_config["num_layers"]) + "|hidden_size=" + str(best_config["hidden_size"])
+
+# config_str = "lr=0.001|batch_size=256|num_layers=4|hidden_size=128"
+
+# hyperparameter_path = "/home/a_eagu/DRL_in_Finance/pg_hyperparameters/"
+
+# with open(hyperparameter_path + "pg_train_losses_" + config_str + ".pickle", "rb") as file:
+#     pg_train_losses = pickle.load(file)
+
+# pg_losses = np.convolve(pg_train_losses, np.ones(ma_size), 'valid') / ma_size
+# pg_train_losses_fig = plt.figure(figsize=(12, 6))
+# plt.plot(pg_losses, label="RSMSE")
+# plt.xlabel("Episodes")
+# # plt.xscale("log")
+# plt.ylabel("RSMSE")
+# plt.legend()
+# plt.grid(which="both")
+# plt.title("RSMSE " + str(ma_size) + " Episode Moving Average for PG")
+# plt.savefig(hyperparameter_path + "pg_train_losses.png")
+# plt.close()
 
 """Print baseline models performance statistics"""
 
@@ -370,6 +548,11 @@ rsmse_DH_leland = np.sqrt(np.mean(semi_square_hedging_err_DH_leland))
 
 
 """Grid search hyperparameter tuning"""
+
+lr_list = [0.001, 0.0001, 0.00001]
+num_layers_list = [4, 3, 2]
+nbs_units_list = [256, 128, 64]
+batch_size_list = [256, 128, 64]
 
 def hyperparameter_tuning(agent_type, episodes, lr_list, num_layers_list, nbs_units_list, batch_size_list, discretized=False):
     hyperparameter_path = "/home/a_eagu/DRL_in_Finance/" + agent_type + "_hyperparameters/"

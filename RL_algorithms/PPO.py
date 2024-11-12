@@ -7,20 +7,25 @@ from option_hedging.code_pytorch.DeepHedgingEnvironment import DeepHedgingEnviro
 import torch.optim.lr_scheduler as lr_scheduler
 
 class PPO:
-    def __init__(self, state_size, action_size, num_layers, hidden_size, gamma=0.99, lr=0.0001, clip_eps=0.2, batch_size=128, epochs=10):
+    def __init__(self, config, state_size=3, action_size=1, clip_eps=0.2, epochs=10):
+        
+        self.lr = config.get("lr", 0.0001)                          # learning rate
+        self.batch_size = config.get("batch_size", 128)             # batch size
+        self.num_layers = config.get("num_layers")
+        self.hidden_size = config.get("hidden_size")
+        
+        self.gamma = 1.0                                            # discount factor
         self.state_size = state_size            
-        self.action_size = action_size
-        self.gamma = gamma                      # discount factor                 
+        self.action_size = action_size                 
         self.clip_eps = clip_eps                # clipping factor of the gradient estimate
-        self.lr = lr                            # learning rate
-        self.batch_size = batch_size            # batch size
         self.epochs = epochs                    # number of epochs
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # self.device = torch.device('cpu')
         # Policy network
-        self.policy = FFNN(state_size, action_size * 2, num_layers, hidden_size, log_predicted=True).to(self.device) # Output mean and log_std
+        self.policy = FFNN(state_size, action_size * 2, self.num_layers, self.hidden_size, log_predicted=True).to(self.device) # Output mean and log_std
         # Value network
-        self.value = FFNN(state_size, 1, num_layers, hidden_size).to(self.device)
+        self.value = FFNN(state_size, 1, self.num_layers, self.hidden_size).to(self.device)
 
         self.policy.apply(self.init_weights)
         self.value.apply(self.init_weights)
@@ -74,11 +79,11 @@ class PPO:
             
         return advantages
 
-    def train(self, env, val_env, episodes=1000, lr_schedule=True):
+    def train(self, env, val_env, BS_rsmse, episodes=1000, lr_schedule=True):
         self.policy.train()
         self.value.train()
         env.train()
-        val_env.test()
+        val_env.train()
 
         self.N = env.N
         
@@ -88,6 +93,8 @@ class PPO:
             self.value_scheduler = lr_scheduler.LinearLR(self.value_optimizer, start_factor=1.0, end_factor=0.1, total_iters=episodes)
             self.policy_scheduler = lr_scheduler.LinearLR(self.policy_optimizer, start_factor=1.0, end_factor=0.1, total_iters=episodes)
         
+        print("TRAINING PPO")
+
         for episode in range(episodes):
             state = env.reset(self.batch_size)
             val_state = val_env.reset(self.batch_size)
@@ -136,24 +143,6 @@ class PPO:
             returns = self.calculate_returns(rewards).to(self.device)
             advantages = self.calculate_advantages(returns, values)
 
-            # rewards = rewards.flatten(start_dim=0, end_dim=1)
-            # actions = actions.flatten(start_dim=0, end_dim=1)
-            # states = states.flatten(start_dim=0, end_dim=1)
-            # log_probs = log_probs.flatten(start_dim=0, end_dim=1)
-            # dones = dones.flatten(start_dim=0, end_dim=1)
-            # values = values.flatten(start_dim=0, end_dim=1)
-            # returns = returns.flatten(start_dim=0, end_dim=1)
-            # advantages = advantages.flatten(start_dim=0, end_dim=1)
-
-            # print("rewards.shape: ", rewards.shape)
-            # print("actions.shape: ", actions.shape) 
-            # print("states.shape: ", states.shape)
-            # print("log_probs.shape: ", log_probs.shape)
-            # print("dones.shape: ", dones.shape)
-            # print("values.shape: ", values.shape)
-            # print("returns.shape: ", returns.shape)
-            # print("advantages.shape: ", advantages.shape)
-
             # Training using mini-batches and multiple epochs
             for _ in range(self.epochs):
 
@@ -192,6 +181,10 @@ class PPO:
 
             if episode % 100 == 0:
                 print(f"Episode {episode}/{episodes}, Policy Loss: {loss_policy.item()}, Value Loss: {loss_value.item()}, Validation Loss: {val_loss.item()}")
+            
+            if len(episode_val_loss) > 50000:
+                if sum(episode_val_loss[-10000:])/10000 < BS_rsmse:
+                    break
 
         # Save the trained model after training
         # self.save("ppo_model.pth")
