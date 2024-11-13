@@ -25,7 +25,7 @@ import pickle
 import tempfile
 import shutil
 
-global_path_prefix = "/home/a_eagu/DRL_in_Finance/option_hedging/code_pytorch/"
+global_path_prefix = os.getcwd()+"/"
 
 nbs_point_traj = 13
 T = 252/252
@@ -105,7 +105,7 @@ def generate_BS_dataset(dataset_type="train_set", size=train_size):
         Z = torch.randn(size)
         dataset[:, i+1] = dataset[:, i] * torch.exp((mu - sigma ** 2 / 2) * dt + sigma * math.sqrt(dt) * Z)
 
-    torch.save(dataset, global_path_prefix + str(dataset_type))
+    torch.save(dataset, global_path_prefix + "option_hedging/code_pytorch/BS_" + str(dataset_type))
 
 # Training the GARCH model
 def train_garch():
@@ -116,7 +116,7 @@ def generate_garch_dataset(dataset_type="train_set", size=train_size):
     print("Generating GARCH Data Set")
     dataset = garch_model.generate(S_0=S_0, batch_size=size, num_points=nbs_point_traj, load_params=True)
     dataset = torch.from_numpy(dataset).to(torch.float)
-    torch.save(dataset, global_path_prefix + str(dataset_type))
+    torch.save(dataset, global_path_prefix  + "option_hedging/code_pytorch/" + str(dataset_type))
 
 """Training the garch model and generating the datasets"""
 train_garch()
@@ -129,9 +129,9 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device = torch.device('cpu')
 
 # Load the training and testing datasets
-train_set = torch.load(global_path_prefix + "train_set", weights_only=True)
-val_set = torch.load(global_path_prefix + "val_set", weights_only=True)
-test_set = torch.load(global_path_prefix + "test_set", weights_only=True)
+train_set = torch.load(global_path_prefix + "option_hedging/code_pytorch/train_set", weights_only=True)
+val_set = torch.load(global_path_prefix + "option_hedging/code_pytorch/val_set", weights_only=True)
+test_set = torch.load(global_path_prefix + "option_hedging/code_pytorch/test_set", weights_only=True)
 
 # For reproducibility
 torch.manual_seed(0)
@@ -182,7 +182,7 @@ start_time = datetime.datetime.now()
 
 """Train and test PG"""
 
-# hyperparameter_path = "/home/a_eagu/DRL_in_Finance/pg_hyperparameters/"
+# hyperparameter_path = global_path_prefix + "pg_hyperparameters/"
 
 # deep_hedging_env.discretized = False
 # validation_deep_hedging_env.discretized = False
@@ -229,7 +229,7 @@ start_time = datetime.datetime.now()
 # dqn_train_losses = dqn_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
 # dqn_actions, dqn_rewards, dqn_rsmse = dqn_agent.test(deep_hedging_env)
 
-# hyperparameter_path = "/home/a_eagu/DRL_in_Finance/dqn_hyperparameters/"
+# hyperparameter_path = global_path_prefix + "dqn_hyperparameters/"
 # dqn_losses = np.convolve(dqn_train_losses, np.ones(ma_size), 'valid') / ma_size
 # dqn_train_losses_fig = plt.figure(figsize=(12, 6))
 # plt.plot(dqn_losses, label="RSMSE")
@@ -259,7 +259,7 @@ start_time = datetime.datetime.now()
 # ppo_train_losses = ppo_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
 # ppo_actions, ppo_rewards, ppo_rsmse = ppo_agent.test(deep_hedging_env)
 
-# hyperparameter_path = "/home/a_eagu/DRL_in_Finance/ppo_hyperparameters/"
+# hyperparameter_path = global_path_prefix + "ppo_hyperparameters/"
 # ppo_losses = np.convolve(ppo_train_losses[200:], np.ones(ma_size), 'valid') / ma_size
 # ppo_train_losses_fig = plt.figure(figsize=(12, 6))
 # plt.plot(ppo_losses, label="RSMSE")
@@ -289,7 +289,7 @@ start_time = datetime.datetime.now()
 # ddpg_train_losses = ddpg_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
 # ddpg_actions, ddpg_rewards, ddpg_rsmse = ddpg_agent.test(deep_hedging_env)
 
-# hyperparameter_path = "/home/a_eagu/DRL_in_Finance/ddpg_hyperparameters/"
+# hyperparameter_path = global_path_prefix + "ddpg_hyperparameters/"
 # ddpg_losses = np.convolve(ddpg_train_losses, np.ones(ma_size), 'valid') / ma_size
 # ddpg_train_losses_fig = plt.figure(figsize=(12, 6))
 # plt.plot(ddpg_losses, label="RSMSE")
@@ -329,7 +329,7 @@ def train_pg(config):
     torch.manual_seed(0)
     random.seed(0)
     np.random.seed(0)
-    hyperparameter_path = "/home/a_eagu/DRL_in_Finance/pg_hyperparameters/"
+    hyperparameter_path = global_path_prefix + "pg_hyperparameters/"
 
     env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
                                                         nbs_shares, light, train_set=train_set, test_set=test_set, discretized=False)
@@ -357,7 +357,7 @@ def train_dqn(config):
     torch.manual_seed(0)
     random.seed(0)
     np.random.seed(0)
-    hyperparameter_path = "/home/a_eagu/DRL_in_Finance/dqn_hyperparameters/"
+    hyperparameter_path = global_path_prefix + "dqn_hyperparameters/"
     
     env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
                                                         nbs_shares, light, train_set=train_set, test_set=test_set, discretized=True)
@@ -387,7 +387,7 @@ def train_ppo(config):
     torch.manual_seed(0)
     random.seed(0)
     np.random.seed(0)
-    hyperparameter_path = "/home/a_eagu/DRL_in_Finance/ppo_hyperparameters/"
+    hyperparameter_path = global_path_prefix + "ppo_hyperparameters/"
 
     env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
                                                         nbs_shares, light, train_set=train_set, test_set=test_set, discretized=False)
@@ -415,7 +415,7 @@ def train_ddpg(config):
     torch.manual_seed(0)
     random.seed(0)
     np.random.seed(0)
-    hyperparameter_path = "/home/a_eagu/DRL_in_Finance/ddpg_hyperparameters/"
+    hyperparameter_path = global_path_prefix + "ddpg_hyperparameters/"
 
     env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
                                                         nbs_shares, light, train_set=train_set, test_set=test_set, discretized=False)
@@ -440,7 +440,7 @@ def train_ddpg(config):
         train.report({"rsmse": rsmse}, checkpoint=checkpoint)
 
 def raytune(train_func, configs, model_name):
-    ray.init(_temp_dir="/home/a_eagu/DRL_in_Finance/temp/")
+    ray.init(_temp_dir = global_path_prefix +"temp/")
     trainable_with_gpu = tune.with_resources(train_func, {"gpu": 0.05})
 
     tuner = tune.Tuner(
@@ -456,7 +456,7 @@ def raytune(train_func, configs, model_name):
 
     # Get a dataframe of results for a specific score or mode
     df = results.get_dataframe(filter_metric="rsmse", filter_mode="min").sort_values(by=["rsmse"])
-    with open("/home/a_eagu/DRL_in_Finance/" + model_name + "_hyperparameters/raytune_" + model_name + ".txt", "w") as raytune_file:
+    with open(global_path_prefix + model_name + "_hyperparameters/raytune_" + model_name + ".txt", "w") as raytune_file:
         raytune_file.write(df.to_string())
 
     best_result = results.get_best_result()  # Get best result object
@@ -469,22 +469,24 @@ def raytune(train_func, configs, model_name):
     print("best_logdir: ", best_logdir)
     print("best_checkpoint: ", best_checkpoint)
 
-    shutil.copyfile(best_checkpoint.path + "/" + model_name + "_model.pth", "/home/a_eagu/DRL_in_Finance/" + model_name + "_hyperparameters/" + model_name + "_model.pth")
+    shutil.copyfile(best_checkpoint.path + "/" + model_name + "_model.pth", global_path_prefix + model_name + "_hyperparameters/" + model_name + "_model.pth")
     
     return best_config
 
 # best_config = raytune(train_func=train_pg, configs=configs, model_name="pg")
 
-best_config = raytune(train_func=train_ppo, configs=configs, model_name="ppo")
+best_config = raytune(train_func=train_ddpg, configs=configs, model_name="ddpg")
 
-model = PPO.PPO(best_config, state_size, action_size=1)
-model.load("/home/a_eagu/DRL_in_Finance/ppo_hyperparameters/ppo_model.pth")
+# val_env.discretized = True
+# action_size = env.discretized_actions.shape[0]
+model = DDPG.DDPG(best_config, state_size, action_size=1)
+model.load(global_path_prefix + "ddpg_hyperparameters/ddpg_model.pth")
 _, _, rsmse = model.test(val_env)
 
 print("rsmse: ", rsmse)
 
 # model = PG.PG(best_config, state_size, action_size=1)
-# model.load("/home/a_eagu/DRL_in_Finance/pg_hyperparameters/pg_model.pth")
+# model.load(global_path_prefix + "pg_hyperparameters/pg_model.pth")
 # _, _, rsmse = model.test(val_env)
 
 # print("rsmse: ", rsmse)
@@ -493,7 +495,7 @@ print("rsmse: ", rsmse)
 
 # config_str = "lr=0.001|batch_size=256|num_layers=4|hidden_size=128"
 
-# hyperparameter_path = "/home/a_eagu/DRL_in_Finance/pg_hyperparameters/"
+# hyperparameter_path = global_path_prefix + "pg_hyperparameters/"
 
 # with open(hyperparameter_path + "pg_train_losses_" + config_str + ".pickle", "rb") as file:
 #     pg_train_losses = pickle.load(file)
@@ -555,7 +557,7 @@ nbs_units_list = [256, 128, 64]
 batch_size_list = [256, 128, 64]
 
 def hyperparameter_tuning(agent_type, episodes, lr_list, num_layers_list, nbs_units_list, batch_size_list, discretized=False):
-    hyperparameter_path = "/home/a_eagu/DRL_in_Finance/" + agent_type + "_hyperparameters/"
+    hyperparameter_path = global_path_prefix + agent_type + "_hyperparameters/"
     configs = []
     rsmses = []
     config_index = 0
