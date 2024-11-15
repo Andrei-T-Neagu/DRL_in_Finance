@@ -54,7 +54,7 @@ elif T == 1/252:
     start=(datetime.date.today()-datetime.timedelta(days=720)).strftime("%Y-%m-%d")
     end=(datetime.date.today()-datetime.timedelta(days=1)).strftime("%Y-%m-%d")
     interval= "1h"
-    nbs_point_traj = 9
+    nbs_point_traj = 8
 
 if twin_delayed:
     ddpg_model_type = "twin_delayed"
@@ -484,7 +484,7 @@ def train_ddpg(config):
         train.report({"rsmse": rsmse}, checkpoint=checkpoint)
 
 def raytune(train_func, configs, model_name):
-    ray.init(_temp_dir = global_path_prefix +"temp/")
+    ray.init()
     if cpu:
         trainable_with_gpu = tune.with_resources(train_func, {"cpu": cpus})
     else:
