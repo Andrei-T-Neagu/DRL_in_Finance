@@ -28,7 +28,7 @@ trans_costs = 0.00              #proportional transaction costs 0.0 or 0.01
 twin_delayed=False
 double=True
 dueling=False
-T = 252/252
+T = 1/252
 
 cpu = True
 cpus = 1
@@ -108,7 +108,14 @@ lr_schedule = True
 state_size = 3 if light else 4
 
 # Black-Scholes mu and sigma parameters estimated from real market data
-market_data = yf.download(stock, start=start, end=end, interval="1d", timeout=60)
+# market_data = yf.download(stock, start=start, end=end, interval="1d", timeout=60)
+
+# with open("market_data_" + stock + "_" + time_frame + ".pickle", 'wb') as file:
+#     pickle.dump(market_data, file)
+
+with open("market_data_" + stock + "_" + time_frame + ".pickle", "rb") as file:
+    market_data = pickle.load(file)
+
 log_returns = np.log(market_data['Close'] / market_data['Close'].shift(1)).dropna()
 mu = log_returns.mean() * 252
 sigma = log_returns.std() * np.sqrt(252)
@@ -128,7 +135,7 @@ else:
     V_0 = Utils_general.BlackScholes_price(S_0, T, r_borrow, params_vect[1], strike, -1)
 
 # Initialize the garch model
-garch_model = GARCH(stock=stock, start=start, end=end, interval=interval, type=garch_type)
+garch_model = GARCH(stock=stock, market_data=market_data, start=start, end=end, interval=interval, type=garch_type)
 
 # Creating Black-Scholes datasets
 def generate_BS_dataset(dataset_type="train_set", size=train_size):

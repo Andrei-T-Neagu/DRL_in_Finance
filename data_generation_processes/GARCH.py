@@ -21,7 +21,7 @@ class GARCH():
         h_t:        conditional variance of a_t at time t.
         z_t:        iid errors such that E[z_t] = 0 and E[z_t z_t] = 1.
     """
-    def __init__(self, dcc=False, data=None, stock=None, start="2000-01-01", end="2024-08-20", interval="1d", type = "vanilla"):
+    def __init__(self, dcc=False, market_data=None, data=None, stock=None, start="2000-01-01", end="2024-08-20", interval="1d", type = "vanilla"):
         """
             Args:   
             dcc:        True if used in the DCC_GARCH classes
@@ -34,6 +34,9 @@ class GARCH():
         """
         if dcc:
             self.data = data
+        elif market_data is not None:
+            log_returns = np.log(market_data['Close'] / market_data['Close'].shift(1)).dropna()
+            self.data = log_returns.to_numpy().T*100
         else:
             market_data = yf.download(stock, start=start, end=end, interval=interval, timeout=60)
             log_returns = np.log(market_data['Close'] / market_data['Close'].shift(1)).dropna()
