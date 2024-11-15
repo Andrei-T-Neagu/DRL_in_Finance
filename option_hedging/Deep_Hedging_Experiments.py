@@ -108,7 +108,7 @@ lr_schedule = True
 state_size = 3 if light else 4
 
 # Black-Scholes mu and sigma parameters estimated from real market data
-market_data = yf.download(stock, start=start, end=end, interval="1d")
+market_data = yf.download(stock, start=start, end=end, interval="1d", timeout=60)
 log_returns = np.log(market_data['Close'] / market_data['Close'].shift(1)).dropna()
 mu = log_returns.mean() * 252
 sigma = log_returns.std() * np.sqrt(252)
