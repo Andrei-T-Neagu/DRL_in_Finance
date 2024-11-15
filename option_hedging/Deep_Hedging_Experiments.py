@@ -23,7 +23,6 @@ import pickle
 import tempfile
 import shutil
 
-
 episodes = 1000
 trans_costs = 0.00              #proportional transaction costs 0.0 or 0.01
 twin_delayed=False
