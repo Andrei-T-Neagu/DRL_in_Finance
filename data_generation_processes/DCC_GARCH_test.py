@@ -66,7 +66,7 @@ plt.savefig("dcc_garch_test.png")
 plt.close()
 
 """Comparison of parameters with mgarch library"""
-market_data = yf.download(stocks, start=start, end=end, interval=interval)
+market_data = yf.download(stocks, start=start, end=end, interval=interval, timeout=60)
 log_returns = np.log(market_data['Close'] / market_data['Close'].shift(1)).dropna()
 data = log_returns.to_numpy()*100                                        #(T, N) Dataset of log returns
 

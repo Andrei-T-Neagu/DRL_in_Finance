@@ -35,7 +35,7 @@ class GARCH():
         if dcc:
             self.data = data
         else:
-            market_data = yf.download(stock, start=start, end=end, interval=interval)
+            market_data = yf.download(stock, start=start, end=end, interval=interval, timeout=60)
             log_returns = np.log(market_data['Close'] / market_data['Close'].shift(1)).dropna()
             self.data = log_returns.to_numpy().T*100
         self.type = type                                                                                # Garch type

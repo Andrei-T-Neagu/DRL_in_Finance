@@ -33,7 +33,7 @@ class DCC_GARCH():
             end:    "YYYY-MM-DD" used by yfinance as the end date to download stock data
             type:   "vanilla" or "gjr"
         """
-        market_data = yf.download(stocks, start=start, end=end, interval=interval)
+        market_data = yf.download(stocks, start=start, end=end, interval=interval, timeout=60)
         log_returns = np.log(market_data['Close'] / market_data['Close'].shift(1)).dropna()
         self.data = log_returns.to_numpy().T*100                                    #(N, T) Dataset of log returns
         self.stocks = sorted(list(stocks.split(" ")))                               # List of the stock names

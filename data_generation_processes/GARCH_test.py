@@ -49,7 +49,7 @@ plt.savefig("garch_test.png")
 plt.close()
 
 """Comparison of parameters with arch library"""
-market_data = yf.download(stock, start=start, end=end, interval=interval)
+market_data = yf.download(stock, start=start, end=end, interval=interval,timeout=60)
 log_returns = np.log(market_data['Close'] / market_data['Close'].shift(1)).dropna()
 
 mu = log_returns.mean() * 252
