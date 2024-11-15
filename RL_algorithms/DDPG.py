@@ -5,7 +5,7 @@ import numpy as np
 import random
 from collections import deque
 from neural_networks.FFNN import FFNN
-from option_hedging.code_pytorch.DeepHedgingEnvironment import DeepHedgingEnvironment
+from option_hedging.DeepHedgingEnvironment import DeepHedgingEnvironment
 import torch.optim.lr_scheduler as lr_scheduler
 
 class DDPG:
@@ -153,7 +153,7 @@ class DDPG:
                 policy_loss.backward()
                 self.policy_optimizer.step()
                 
-    def train(self, env, val_env, BS_rsmse, episodes=1000, lr_schedule = True):
+    def train(self, env, val_env, BS_rsmse, episodes=1000, lr_schedule = True, render=False):
         self.policy.train()
         self.value.train()
         if self.twin_delayed:
@@ -219,17 +219,16 @@ class DDPG:
             
             self.epsilon -= epsilon_decay
 
-            if e % 100 == 0:
+            if render and e % 1000 == 0:
                 print(f"Episode {e}/{episodes-1}, Validation Loss: {val_loss.item()}")
             
             if len(episode_val_loss) > 50000:
                 if sum(episode_val_loss[-10000:])/10000 < BS_rsmse:
                     break
 
-        # self.save("ddpg_model.pth")
         return episode_val_loss
 
-    def test(self, env):
+    def test(self, env, render=False):
         """
         Test the trained PPO agent in the environment.
         
@@ -282,7 +281,7 @@ class DDPG:
             loss = torch.sqrt(torch.mean(torch.square(torch.where(total_reward > 0, total_reward, 0))))
             total_val_reward[:,batch] = total_reward
 
-            if batch % 100 == 0:
+            if render and batch % 100 == 0:
                 print(f"Batch: {batch}/{batches-1}, Total Reward: {loss.item()}")
 
         rsmse = torch.sqrt(torch.mean(torch.square(torch.where(total_val_reward > 0, total_val_reward, 0))))
@@ -299,7 +298,7 @@ class DDPG:
                         'value_state_dict': self.value.state_dict(),}, name)
             
     def load(self, name):
-        checkpoint = torch.load(name)
+        checkpoint = torch.load(name, weights_only=True)
         self.policy.load_state_dict(checkpoint['policy_state_dict'])
         self.value.load_state_dict(checkpoint['value_state_dict'])
         

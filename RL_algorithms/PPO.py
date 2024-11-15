@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 from neural_networks.FFNN import FFNN
-from option_hedging.code_pytorch.DeepHedgingEnvironment import DeepHedgingEnvironment
+from option_hedging.DeepHedgingEnvironment import DeepHedgingEnvironment
 import torch.optim.lr_scheduler as lr_scheduler
 
 class PPO:
@@ -79,7 +79,7 @@ class PPO:
             
         return advantages
 
-    def train(self, env, val_env, BS_rsmse, episodes=1000, lr_schedule=True):
+    def train(self, env, val_env, BS_rsmse, episodes=1000, lr_schedule=True, render=False):
         self.policy.train()
         self.value.train()
         env.train()
@@ -179,15 +179,13 @@ class PPO:
                 self.value_scheduler.step()
                 self.policy_scheduler.step()
 
-            if episode % 100 == 0:
+            if render and episode % 1000 == 0:
                 print(f"Episode {episode}/{episodes}, Policy Loss: {loss_policy.item()}, Value Loss: {loss_value.item()}, Validation Loss: {val_loss.item()}")
             
             if len(episode_val_loss) > 50000:
                 if sum(episode_val_loss[-10000:])/10000 < BS_rsmse:
                     break
 
-        # Save the trained model after training
-        # self.save("ppo_model.pth")
         return episode_val_loss
 
     def test(self, env, episodes=1000, render=False):
@@ -246,7 +244,7 @@ class PPO:
             loss = torch.sqrt(torch.mean(torch.square(torch.where(total_reward > 0, total_reward, 0))))
             total_val_reward[:,batch] = total_reward
 
-            if batch % 100 == 0:
+            if render and batch % 100 == 0:
                 print(f"Batch: {batch}/{batches-1}, Total Reward: {loss.item()}")
         rsmse = torch.sqrt(torch.mean(torch.square(torch.where(total_val_reward > 0, total_val_reward, 0))))
 
@@ -258,6 +256,6 @@ class PPO:
                     'value_state_dict': self.value.state_dict()}, name)
 
     def load(self, name):
-        checkpoint = torch.load(name)
+        checkpoint = torch.load(name, weights_only=True)
         self.policy.load_state_dict(checkpoint['policy_state_dict'])
         self.value.load_state_dict(checkpoint['value_state_dict'])

@@ -5,7 +5,7 @@ import numpy as np
 import random
 from collections import deque
 from neural_networks.FFNN import FFNN
-from option_hedging.code_pytorch.DeepHedgingEnvironment import DeepHedgingEnvironment
+from option_hedging.DeepHedgingEnvironment import DeepHedgingEnvironment
 import torch.optim.lr_scheduler as lr_scheduler
 import matplotlib.pyplot as plt
 
@@ -69,7 +69,7 @@ class PG:
         Returns:
         - None
         """
-        self.model.load_state_dict(torch.load(name))
+        self.model.load_state_dict(torch.load(name, weights_only=True))
 
     # save the model
     def save(self, name):
@@ -85,7 +85,7 @@ class PG:
         torch.save(self.model.state_dict(), name)
 
     # Training loop
-    def train(self, env, val_env, BS_rsmse, episodes=1000, lr_schedule = True):
+    def train(self, env, val_env, BS_rsmse, episodes=1000, lr_schedule = True, render=False):
         """
         Training loop for policy gradient with a deterministic policy
 
@@ -146,7 +146,7 @@ class PG:
             if lr_schedule:
                 self.scheduler.step()
             
-            if e % 100 == 0:
+            if render and e % 1000 == 0:
                 print(f"Episode {e}/{episodes-1}, Total Reward: {val_loss.item()}")
 
             if len(episode_val_loss) > 50000:
@@ -155,7 +155,7 @@ class PG:
         
         return episode_val_loss
 
-    def test(self, env):
+    def test(self, env, render=False):
         """
         Test a trained DQN agent on the environment.
         
@@ -205,7 +205,7 @@ class PG:
             loss = torch.sqrt(torch.mean(torch.square(torch.where(total_reward > 0, total_reward, 0))))
             total_val_reward[:,batch] = total_reward
 
-            if batch % 100 == 0:
+            if render and batch % 100 == 0:
                 print(f"Batch: {batch}/{batches-1}, Total Reward: {loss.item()}")
         rsmse = torch.sqrt(torch.mean(torch.square(torch.where(total_val_reward > 0, total_val_reward, 0))))
         return actions.flatten(1), rewards.flatten(), rsmse.item()
