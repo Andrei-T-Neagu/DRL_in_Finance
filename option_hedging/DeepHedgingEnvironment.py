@@ -35,9 +35,9 @@ class DeepHedgingEnvironment():
         self.discretized = discretized                                                                      # For if the action space is discretized
         self.discretized_actions = torch.arange(start=-0.5, end=2.0, step=0.05, device=self.device)
 
-        self.train_set = train_set
-        self.test_set = test_set
-        self.dataset = train_set
+        self.train_set = train_set.to(self.device)
+        self.test_set = test_set.to(self.device)
+        self.dataset = train_set.to(self.device)
         self.path = 0                   # the current path in the dataset
 
     def train(self):
@@ -144,7 +144,7 @@ class DeepHedgingEnvironment():
         # Update stock price
 
         batch = self.dataset[self.path*self.batch_size:(self.path+1)*self.batch_size,:]     # torch.Tensor of size [self.batch_size, self.N] representing a batch of price paths
-        self.S_t = batch[:,self.t+1].to(device=self.device)                                 # torch.Tensor of size [self.batch_size] representing a batch of prices at the next time step
+        self.S_t = batch[:,self.t+1]                                                        # torch.Tensor of size [self.batch_size] representing a batch of prices at the next time step
         
         # Liquidation portfolio value
         L_t = self.liquid_func(self.S_t, self.delta_t_next)     # torch.Tensor of size [self.batch_size]. Revenue from liquidating
