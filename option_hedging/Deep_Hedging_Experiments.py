@@ -30,7 +30,7 @@ double=True
 dueling=False
 T = 252/252
 
-cpu = True
+cpu = False
 cpus = 1
 gpus = 0.05
 
@@ -383,7 +383,7 @@ def train_pg(config):
     train_losses = model.train(env, val_env, BS_rsmse=rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
     
     config_str = "lr=" + str(model.lr) + "|batch_size=" + str(model.batch_size) + "|num_layers=" + str(model.num_layers) + "|hidden_size=" + str(model.hidden_size)
-    with open(hyperparameter_path + "pg_train_losses_" + config_str + ".pickle", 'wb') as file:
+    with open(hyperparameter_path + "train_losses/" + "pg_train_losses_" + config_str + ".pickle", 'wb') as file:
         pickle.dump(train_losses, file)
     
     _, _, rsmse = model.test(val_env)
@@ -414,7 +414,7 @@ def train_dqn(config):
     train_losses = model.train(env, val_env, BS_rsmse=rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
     
     config_str = "lr=" + str(model.lr) + "|batch_size=" + str(model.batch_size) + "|num_layers=" + str(model.num_layers) + "|hidden_size=" + str(model.hidden_size)
-    with open(hyperparameter_path + "dqn_train_losses_" + config_str + ".pickle", 'wb') as file:
+    with open(hyperparameter_path + "train_losses/" + "dqn_train_losses_" + config_str + ".pickle", 'wb') as file:
         pickle.dump(train_losses, file)
     
     _, _, rsmse = model.test(val_env)
@@ -442,7 +442,7 @@ def train_ppo(config):
     train_losses = model.train(env, val_env, BS_rsmse=rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
     
     config_str = "lr=" + str(model.lr) + "|batch_size=" + str(model.batch_size) + "|num_layers=" + str(model.num_layers) + "|hidden_size=" + str(model.hidden_size)
-    with open(hyperparameter_path + "ppo_train_losses_" + config_str + ".pickle", 'wb') as file:
+    with open(hyperparameter_path + "train_losses/" + "ppo_train_losses_" + config_str + ".pickle", 'wb') as file:
         pickle.dump(train_losses, file)
     
     _, _, rsmse = model.test(val_env)
@@ -470,7 +470,7 @@ def train_ddpg(config):
     train_losses = model.train(env, val_env, BS_rsmse=rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
     
     config_str = "lr=" + str(model.lr) + "|batch_size=" + str(model.batch_size) + "|num_layers=" + str(model.num_layers) + "|hidden_size=" + str(model.hidden_size)
-    with open(hyperparameter_path + "ddpg_train_losses_" + config_str + ".pickle", 'wb') as file:
+    with open(hyperparameter_path + "train_losses/" + "ddpg_train_losses_" + config_str + ".pickle", 'wb') as file:
         pickle.dump(train_losses, file)
     
     _, _, rsmse = model.test(val_env)
@@ -558,14 +558,14 @@ def tune_pg():
 
     config_str = "lr=" + str(best_config["lr"]) + "|batch_size=" + str(best_config["batch_size"]) + "|num_layers=" + str(best_config["num_layers"]) + "|hidden_size=" + str(best_config["hidden_size"])
 
-    with open(hyperparameter_path + "pg_train_losses_" + config_str + ".pickle", "rb") as file:
+    with open(hyperparameter_path + "train_losses/" + "pg_train_losses_" + config_str + ".pickle", "rb") as file:
         pg_train_losses = pickle.load(file)
 
     plot_training_losses(pg_train_losses, model_name="pg", hyperparameter_path=hyperparameter_path)
 
 def tune_dqn():
     hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/dqn_hyperparameters/" + dqn_model_type + "/" + time_frame + "/" + str(trans_costs) + "/"
-    best_config = raytune(train_func=train_pg, configs=configs, model_name="dqn")
+    best_config = raytune(train_func=train_dqn, configs=configs, model_name="dqn")
         
     val_env.discretized = True
     action_size = env.discretized_actions.shape[0]
@@ -577,7 +577,7 @@ def tune_dqn():
 
     config_str = "lr=" + str(best_config["lr"]) + "|batch_size=" + str(best_config["batch_size"]) + "|num_layers=" + str(best_config["num_layers"]) + "|hidden_size=" + str(best_config["hidden_size"])
 
-    with open(hyperparameter_path + "dqn_train_losses_" + config_str + ".pickle", "rb") as file:
+    with open(hyperparameter_path + "train_losses/" + "dqn_train_losses_" + config_str + ".pickle", "rb") as file:
         dqn_train_losses = pickle.load(file)
 
     plot_training_losses(dqn_train_losses, model_name="dqn", hyperparameter_path=hyperparameter_path)
@@ -594,7 +594,7 @@ def tune_ppo():
 
     config_str = "lr=" + str(best_config["lr"]) + "|batch_size=" + str(best_config["batch_size"]) + "|num_layers=" + str(best_config["num_layers"]) + "|hidden_size=" + str(best_config["hidden_size"])
 
-    with open(hyperparameter_path + "ppo_train_losses_" + config_str + ".pickle", "rb") as file:
+    with open(hyperparameter_path + "train_losses/" + "ppo_train_losses_" + config_str + ".pickle", "rb") as file:
         ppo_train_losses = pickle.load(file)
 
     plot_training_losses(ppo_train_losses, model_name="ppo", hyperparameter_path=hyperparameter_path)
@@ -610,10 +610,25 @@ def tune_ddpg():
 
     config_str = "lr=" + str(best_config["lr"]) + "|batch_size=" + str(best_config["batch_size"]) + "|num_layers=" + str(best_config["num_layers"]) + "|hidden_size=" + str(best_config["hidden_size"])
 
-    with open(hyperparameter_path + "ddpg_train_losses_" + config_str + ".pickle", "rb") as file:
+    with open(hyperparameter_path + "train_losses/" +"ddpg_train_losses_" + config_str + ".pickle", "rb") as file:
         ddpg_train_losses = pickle.load(file)
 
     plot_training_losses(ddpg_train_losses, model_name="ddpg", hyperparameter_path=hyperparameter_path)
+
+
+
+
+
+
+
+
+
+tune_dqn()
+
+
+
+
+
 
 
 
@@ -641,19 +656,6 @@ Utils_general.print_stats(hedging_err_DH_leland, deltas_DH_leland, "Leland delta
 semi_square_hedging_err_DH_leland = np.square(np.where(hedging_err_DH_leland > 0, hedging_err_DH_leland, 0))
 smse_DH_leland = np.mean(semi_square_hedging_err_DH_leland)
 rsmse_DH_leland = np.sqrt(np.mean(semi_square_hedging_err_DH_leland))
-
-
-
-
-
-
-
-tune_pg()
-
-
-
-
-
 
 
 """Grid search hyperparameter tuning"""
