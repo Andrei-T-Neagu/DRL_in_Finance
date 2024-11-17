@@ -43,5 +43,5 @@ class FFNN(nn.Module):
             if self.policy:
                 x = torch.clamp(x, -0.5, 2)
             if self.value:
-                x = torch.clamp(x, -100, 100)
+                x = torch.clamp(x, -50, 50)
             return x

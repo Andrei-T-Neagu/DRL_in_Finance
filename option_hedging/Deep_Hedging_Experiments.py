@@ -32,8 +32,9 @@ T = 252/252
 
 cpu = False
 cpus = 1
-gpus = 0.05
+gpus = 0.0125
 
+ma_size = 100
 
 global_path_prefix = os.getcwd()+"/"
 
@@ -69,8 +70,6 @@ elif double:
     dqn_model_type = "double"
 else:
     dqn_model_type = "vanilla"
-
-ma_size = int(episodes/10)
 
 train_size = 2**19
 val_size = 2**17
@@ -505,7 +504,7 @@ def raytune(train_func, configs, model_name):
     df = results.get_dataframe(filter_metric="rsmse", filter_mode="min").sort_values(by=["rsmse"])
     
     if model_name == "ddpg":
-        hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/dqn_hyperparameters/" + ddpg_model_type + "/" + time_frame + "/" + str(trans_costs) + "/"
+        hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/ddpg_hyperparameters/" + ddpg_model_type + "/" + time_frame + "/" + str(trans_costs) + "/"
     elif model_name == "dqn":
         hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/dqn_hyperparameters/" + dqn_model_type + "/" + time_frame + "/" + str(trans_costs) + "/"
     else: 
@@ -541,7 +540,7 @@ def plot_training_losses(train_losses, model_name, hyperparameter_path):
     plt.ylabel("RSMSE")
     plt.legend()
     plt.grid(which="both")
-    plt.title("RSMSE " + str(ma_size) + " episode moving average for " + model_name)
+    plt.title("RSMSE training losses " + str(ma_size) + " episode moving average for " + str(len(train_losses)) + " episodes of " + model_name)
     plt.savefig(hyperparameter_path + model_name + "_train_losses.png")
     plt.close()
 
@@ -600,7 +599,7 @@ def tune_ppo():
     plot_training_losses(ppo_train_losses, model_name="ppo", hyperparameter_path=hyperparameter_path)
 
 def tune_ddpg():
-    hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/dqn_hyperparameters/" + ddpg_model_type + "/" + time_frame + "/" + str(trans_costs) + "/"
+    hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/ddpg_hyperparameters/" + ddpg_model_type + "/" + time_frame + "/" + str(trans_costs) + "/"
     best_config = raytune(train_func=train_ddpg, configs=configs, model_name="ddpg")
     model = DDPG.DDPG(best_config, state_size, action_size=1)
     model.load(hyperparameter_path + "ddpg_model.pth")
@@ -610,7 +609,7 @@ def tune_ddpg():
 
     config_str = "lr=" + str(best_config["lr"]) + "|batch_size=" + str(best_config["batch_size"]) + "|num_layers=" + str(best_config["num_layers"]) + "|hidden_size=" + str(best_config["hidden_size"])
 
-    with open(hyperparameter_path + "train_losses/" +"ddpg_train_losses_" + config_str + ".pickle", "rb") as file:
+    with open(hyperparameter_path + "train_losses/" + "ddpg_train_losses_" + config_str + ".pickle", "rb") as file:
         ddpg_train_losses = pickle.load(file)
 
     plot_training_losses(ddpg_train_losses, model_name="ddpg", hyperparameter_path=hyperparameter_path)
@@ -623,7 +622,7 @@ def tune_ddpg():
 
 
 
-tune_dqn()
+tune_ddpg()
 
 
 
