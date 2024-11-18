@@ -24,7 +24,7 @@ import tempfile
 import shutil
 import subprocess
 
-episodes = 10000
+episodes = 200000
 trans_costs = 0.00              #proportional transaction costs 0.0 or 0.01
 twin_delayed=False
 double=True
@@ -37,7 +37,7 @@ num_gpus = 2
 gpus = 0.025
 subprocess.Popen("nvidia-smi")
 
-ma_size = 100
+ma_size = 1000
 
 global_path_prefix = os.getcwd()+"/"
 
@@ -104,7 +104,7 @@ stock = "^GSPC"
 garch_type="gjr"
 
 # neural network type parameters
-light = True
+light = False
 lr_schedule = True
 
 state_size = 3 if light else 4
@@ -132,10 +132,8 @@ np.random.seed(0)
 
 # Initializing the inital option price using black-scholes option pricing
 if (option_type == 'call'):
-    # V_0 = 0.0
     V_0 = Utils_general.BlackScholes_price(S_0, T, r_borrow, params_vect[1], strike, 1)
 else:
-    # V_0 = 0.0
     V_0 = Utils_general.BlackScholes_price(S_0, T, r_borrow, params_vect[1], strike, -1)
 
 # Initialize the garch model

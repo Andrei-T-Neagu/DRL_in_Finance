@@ -105,7 +105,8 @@ class DeepHedgingEnvironment():
         if self.light == True:
             self.input_t = torch.stack((self.dt * self.t * torch.ones(self.batch_size, device=self.device), self.S_t, self.delta_t), dim=1)
         else:
-            self.input_t = torch.stack((self.dt * self.t * torch.ones(self.batch_size, device=self.device), self.S_t, self.delta_t, (self.V_t/self.S_0)*10), dim=1)
+            self.input_t = torch.stack((self.dt * self.t * torch.ones(self.batch_size, device=self.device), self.S_t, self.delta_t, self.V_t/self.V_0), dim=1)
+        
         return self.input_t
 
     def step(self, action):
@@ -159,7 +160,7 @@ class DeepHedgingEnvironment():
         if self.light == True:
             self.input_t = torch.stack((self.dt * self.t * torch.ones(self.batch_size, device=self.device), self.S_t, self.delta_t_next), dim=1)
         else:
-            self.input_t = torch.stack((self.dt * self.t * torch.ones(self.batch_size, device=self.device), self.S_t, self.delta_t_next, (self.V_t/self.S_0)*10), dim=1)
+            self.input_t = torch.stack((self.dt * self.t * torch.ones(self.batch_size, device=self.device), self.S_t, self.delta_t_next, self.V_t/self.V_0), dim=1)
         
         self.t += 1                                                             # iterate time step
         if self.t == self.N:                                                    # if t is the final time step
@@ -223,7 +224,7 @@ class DeepHedgingEnvironment():
     # Returns:
     #   - Profit from selling
     def cost_selling(self, S_t, x):
-        return S_t * x - self.trans_costs * x
+        return (S_t * x) * (1.0 - self.trans_costs)
     
     # Cost of buying
     # Inputs:
@@ -232,7 +233,7 @@ class DeepHedgingEnvironment():
     # Returns:
     #   - Cost of buying
     def cost_buying(self, S_t, x):
-        return S_t * x + self.trans_costs * x
+        return (S_t * x) * (1.0 + self.trans_costs)
 
     # Liquidation value L_t
     # Inputs:
