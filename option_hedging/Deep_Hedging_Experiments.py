@@ -31,9 +31,11 @@ double=True
 dueling=False
 T = 252/252
 
-cpu = False
+cpu = True
 cpus = 1
-gpus = 0.05
+num_gpus = 2
+gpus = 0.025
+subprocess.Popen("nvidia-smi")
 
 ma_size = 100
 
@@ -171,7 +173,7 @@ generate_garch_dataset(dataset_type="val_set", size=val_size)
 generate_garch_dataset(dataset_type="test_set", size=test_size)
 
 # Select the device
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device = torch.device('cpu')
 
 # Load the training and testing datasets
@@ -487,10 +489,11 @@ def train_ddpg(config):
         train.report({"rsmse": rsmse}, checkpoint=checkpoint)
 
 def raytune(train_func, configs, model_name):
-    ray.init()
     if cpu:
+        ray.init()
         trainable_with_gpu = tune.with_resources(train_func, {"cpu": cpus})
     else:
+        ray.init(num_gpus=num_gpus)
         trainable_with_gpu = tune.with_resources(train_func, {"gpu": gpus})
 
     tuner = tune.Tuner(
@@ -625,9 +628,7 @@ def tune_ddpg():
 
 
 
-
-tune_ppo()
-
+tune_dqn()
 
 
 
