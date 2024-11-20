@@ -37,7 +37,7 @@ num_gpus = 2
 gpus = 0.025
 subprocess.Popen("nvidia-smi")
 
-ma_size = 1000
+ma_size = 10000
 
 global_path_prefix = os.getcwd()+"/"
 
@@ -625,8 +625,7 @@ def tune_ddpg():
 
 
 
-
-tune_ddpg()
+tune_pg()
 
 
 
