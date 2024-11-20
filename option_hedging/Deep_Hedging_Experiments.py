@@ -626,7 +626,7 @@ def tune_ddpg():
 
 
 
-tune_dqn()
+tune_ddpg()
 
 
 
