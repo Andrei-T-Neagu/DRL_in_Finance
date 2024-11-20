@@ -24,7 +24,7 @@ import tempfile
 import shutil
 import subprocess
 
-episodes = 200000
+episodes = 1000
 trans_costs = 0.00              #proportional transaction costs 0.0 or 0.01
 twin_delayed=False
 double=True
@@ -37,7 +37,7 @@ num_gpus = 2
 gpus = 0.025
 subprocess.Popen("nvidia-smi")
 
-ma_size = 10000
+ma_size = 100
 
 global_path_prefix = os.getcwd()+"/"
 
@@ -216,10 +216,10 @@ np.random.seed(0)
 
 # Initialize Deep Hedging environement
 deep_hedging_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                                 nbs_shares, light, train_set=train_set, test_set=test_set, discretized=False)
+                                                                 nbs_shares, light, train_set=train_set, test_set=test_set, trans_costs=trans_costs, discretized=False)
 
 validation_deep_hedging_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                                     nbs_shares, light, train_set=val_set, test_set=test_set, discretized=False)
+                                                                     nbs_shares, light, train_set=val_set, test_set=test_set, trans_costs=trans_costs, discretized=False)
 
 start_time = datetime.datetime.now()
 
@@ -357,9 +357,9 @@ start_time = datetime.datetime.now()
 """HYPERPARAMETER TUNING USING RAYTUNE"""
 
 env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                    nbs_shares, light, train_set=train_set, test_set=test_set, discretized=False)
+                                                    nbs_shares, light, train_set=train_set, test_set=test_set, trans_costs=trans_costs, discretized=False)
 val_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                        nbs_shares, light, train_set=val_set, test_set=test_set, discretized=False)
+                                                        nbs_shares, light, train_set=val_set, test_set=test_set, trans_costs=trans_costs, discretized=False)
 
 configs={
     "lr": tune.grid_search([0.001, 0.0001, 0.00001]),
@@ -376,9 +376,9 @@ def train_pg(config):
     hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/pg_hyperparameters/" + time_frame + "/" + str(trans_costs) + "/"
 
     env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                        nbs_shares, light, train_set=train_set, test_set=test_set, discretized=False)
+                                                        nbs_shares, light, train_set=train_set, test_set=test_set, trans_costs=trans_costs, discretized=False)
     val_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                            nbs_shares, light, train_set=val_set, test_set=test_set, discretized=False)
+                                                            nbs_shares, light, train_set=val_set, test_set=test_set, trans_costs=trans_costs, discretized=False)
     
     model = PG.PG(config, state_size, action_size=1)
     train_losses = model.train(env, val_env, BS_rsmse=rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
@@ -405,9 +405,9 @@ def train_dqn(config):
     hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/dqn_hyperparameters/" + dqn_model_type + "/" + time_frame + "/" + str(trans_costs) + "/"
     
     env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                        nbs_shares, light, train_set=train_set, test_set=test_set, discretized=True)
+                                                        nbs_shares, light, train_set=train_set, test_set=test_set, trans_costs=trans_costs, discretized=True)
     val_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                            nbs_shares, light, train_set=val_set, test_set=test_set, discretized=True)
+                                                            nbs_shares, light, train_set=val_set, test_set=test_set, trans_costs=trans_costs, discretized=True)
 
     action_size = env.discretized_actions.shape[0]
 
@@ -436,9 +436,9 @@ def train_ppo(config):
     hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/ppo_hyperparameters/" + time_frame + "/" + str(trans_costs) + "/"
 
     env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                        nbs_shares, light, train_set=train_set, test_set=test_set, discretized=False)
+                                                        nbs_shares, light, train_set=train_set, test_set=test_set, trans_costs=trans_costs, discretized=False)
     val_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                            nbs_shares, light, train_set=val_set, test_set=test_set, discretized=False)
+                                                            nbs_shares, light, train_set=val_set, test_set=test_set, trans_costs=trans_costs, discretized=False)
 
     model = PPO.PPO(config, state_size, action_size=1)
     train_losses = model.train(env, val_env, BS_rsmse=rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
@@ -465,9 +465,9 @@ def train_ddpg(config):
     hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/ddpg_hyperparameters/" + ddpg_model_type + "/" + time_frame + "/" + str(trans_costs) + "/"
 
     env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                        nbs_shares, light, train_set=train_set, test_set=test_set, discretized=False)
+                                                        nbs_shares, light, train_set=train_set, test_set=test_set, trans_costs=trans_costs, discretized=False)
     val_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                            nbs_shares, light, train_set=val_set, test_set=test_set, discretized=False)
+                                                            nbs_shares, light, train_set=val_set, test_set=test_set, trans_costs=trans_costs, discretized=False)
 
     model = DDPG.DDPG(config, state_size, action_size=1, twin_delayed=twin_delayed)
     train_losses = model.train(env, val_env, BS_rsmse=rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
