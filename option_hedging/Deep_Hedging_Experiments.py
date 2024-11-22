@@ -88,10 +88,10 @@ position_type = "short"
 strike = 100
 
 config={
-    "lr": 0.001,
-    "batch_size": 64,
-    "num_layers": 2,
-    "hidden_size": 64,
+    "lr": 0.0001,
+    "batch_size": 256,
+    "num_layers": 3,
+    "hidden_size": 256,
 }
 
 # batch_size=64,hidden_size=256,lr=0.0010,num_layers=4
@@ -230,28 +230,10 @@ start_time = datetime.datetime.now()
 # deep_hedging_env.discretized = False
 # validation_deep_hedging_env.discretized = False
 # pg_agent = PG.PG(config=config, state_size=state_size, action_size=1)
-# pg_train_losses = pg_agent.train(deep_hedging_env, validation_deep_hedging_env, episodes=episodes, BS_rsmse=rsmse_DH_leland, lr_schedule=lr_schedule)
+# pg_train_losses = pg_agent.train(deep_hedging_env, validation_deep_hedging_env, episodes=episodes, BS_rsmse=rsmse_DH_leland, lr_schedule=lr_schedule, render=True)
 # pg_actions, pg_rewards, pg_rsmse = pg_agent.test(deep_hedging_env)
 
 # print("TIME TAKEN: ", datetime.datetime.now() - start_time)
-
-# with open(hyperparameter_path + 'pg_train_losses.pickle', 'wb') as file:
-#     pickle.dump(pg_train_losses, file)
-
-# with open(hyperparameter_path + 'pg_train_losses.pickle', 'rb') as file:
-#     pg_train_losses = pickle.load(file)
-
-# pg_losses = np.convolve(pg_train_losses, np.ones(ma_size), 'valid') / ma_size
-# pg_train_losses_fig = plt.figure(figsize=(12, 6))
-# plt.plot(pg_losses, label="RSMSE")
-# plt.xlabel("Episodes")
-# # plt.xscale("log")
-# plt.ylabel("RSMSE")
-# plt.legend()
-# plt.grid(which="both")
-# plt.title("RSMSE " + str(ma_size) + " Episode Moving Average for PG")
-# plt.savefig(hyperparameter_path + "pg_train_losses.png")
-# plt.close()
 
 # print("POLICY GRADIENT RSMSE: " + str(pg_rsmse))
 
