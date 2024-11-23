@@ -110,34 +110,24 @@ class PG:
         print("TRAINING PG: ")
         for e in range(episodes):
             state = env.reset(self.batch_size)
-            val_state = val_env.reset(self.batch_size)
 
             done = torch.zeros(self.batch_size)
-            val_done = torch.zeros(self.batch_size)
 
             total_reward = torch.zeros(self.batch_size, device=self.device)
-            val_total_reward = torch.zeros(self.batch_size, device=self.device)
+
             i = 0
 
             while torch.all(done == 0):
                 action = self.model(state)
-                with torch.no_grad():
-                    val_action = self.model(val_state)
 
                 next_state, reward, done = env.step(action)
-                val_next_state, val_reward, val_done = val_env.step(val_action)
 
                 state = next_state
-                val_state = val_next_state
 
                 total_reward += (self.gamma ** i) * reward
-                val_total_reward += (self.gamma ** i) * val_reward
                 i += 1
 
             loss = torch.sqrt(torch.mean(torch.square(torch.where(total_reward > 0, total_reward, 0))))
-            val_loss = torch.sqrt(torch.mean(torch.square(torch.where(val_total_reward > 0, val_total_reward, 0))))
-
-            episode_val_loss.append(val_loss.item())
             
             self.optimizer.zero_grad()
             loss.backward()
@@ -145,14 +135,21 @@ class PG:
             
             if lr_schedule:
                 self.scheduler.step()
-            
-            if render and e % 1000 == 0:
-                print(f"Episode {e}/{episodes-1}, Total Reward: {val_loss.item()}")
 
-            if len(episode_val_loss) > 50000:
-                if sum(episode_val_loss[-10000:])/10000 < BS_rsmse:
-                    break
+            # Compute validation losses
+            if e % 1000 == 0:
+                _, _, val_rsmse = self.test(val_env)
+                self.model.train()
+                episode_val_loss.append(val_rsmse)
+
+            if render and e % 1000 == 0:
+                print(f"Episode {e}/{episodes-1}, Validation RSMSE: {val_rsmse}")
         
+            # Early stopping
+            if len(episode_val_loss) > 3 and val_rsmse < BS_rsmse:
+                if episode_val_loss[-3] > episode_val_loss[-4] and episode_val_loss[-2] > episode_val_loss[-3] and episode_val_loss[-1] > episode_val_loss[-2]:
+                    break
+
         return episode_val_loss
 
     def test(self, env, render=False):
@@ -169,16 +166,15 @@ class PG:
         """
         self.model.eval()
         env.test()
-        train_size = env.dataset.shape[0]
+        set_size = env.dataset.shape[0]
         num_points = env.N
-        batches = int(train_size/self.batch_size)
+        batches = int(set_size/self.batch_size)
 
         actions = torch.zeros(num_points, self.batch_size, batches, device=self.device)
         rewards = torch.zeros(self.batch_size, batches, device=self.device)
 
         total_val_reward = torch.zeros(self.batch_size, batches, device=self.device)
 
-        print("TESTING PG: ")
         for batch in range(batches):
             state = env.reset(self.batch_size)  # Initialize the environment and get the initial state
             done = torch.zeros(self.batch_size)

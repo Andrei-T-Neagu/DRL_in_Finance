@@ -33,11 +33,9 @@ T = 252/252
 
 cpu = True
 cpus = 1
-num_gpus = 2
-gpus = 0.025
+num_gpus = 1
+gpus = 0.05
 subprocess.Popen("nvidia-smi")
-
-ma_size = 10000
 
 global_path_prefix = os.getcwd()+"/"
 
@@ -90,7 +88,7 @@ strike = 100
 config={
     "lr": 0.0001,
     "batch_size": 256,
-    "num_layers": 3,
+    "num_layers": 4,
     "hidden_size": 256,
 }
 
@@ -219,19 +217,35 @@ deep_hedging_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj,
                                                                  nbs_shares, light, train_set=train_set, test_set=test_set, trans_costs=trans_costs, discretized=False)
 
 validation_deep_hedging_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                                     nbs_shares, light, train_set=val_set, test_set=test_set, trans_costs=trans_costs, discretized=False)
+                                                                     nbs_shares, light, train_set=val_set, test_set=val_set, trans_costs=trans_costs, discretized=False)
 
 start_time = datetime.datetime.now()
 
 """Train and test PG"""
 
-# hyperparameter_path = global_path_prefix + "pg_hyperparameters/"
+# hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/pg_hyperparameters/" + time_frame + "/" + str(trans_costs) + "/"
 
 # deep_hedging_env.discretized = False
 # validation_deep_hedging_env.discretized = False
 # pg_agent = PG.PG(config=config, state_size=state_size, action_size=1)
 # pg_train_losses = pg_agent.train(deep_hedging_env, validation_deep_hedging_env, episodes=episodes, BS_rsmse=rsmse_DH_leland, lr_schedule=lr_schedule, render=True)
 # pg_actions, pg_rewards, pg_rsmse = pg_agent.test(deep_hedging_env)
+
+# with open(hyperparameter_path + "pg_train_losses_best_model.pickle", 'wb') as file:
+#         pickle.dump(pg_train_losses, file)
+
+# with open(hyperparameter_path + "pg_train_losses_best_model.pickle", "rb") as file:
+#         pg_train_losses = pickle.load(file)
+
+# pg_train_losses_fig = plt.figure(figsize=(12, 6))
+# plt.plot(pg_train_losses, label="RSMSE")
+# plt.xlabel("Episodes (1000s)")
+# plt.ylabel("RSMSE")
+# plt.legend()
+# plt.grid(which="both")
+# plt.title("Validation RSMSE for PG")
+# plt.savefig(hyperparameter_path + "pg_train_losses_best_model.png")
+# plt.close()
 
 # print("TIME TAKEN: ", datetime.datetime.now() - start_time)
 
@@ -247,23 +261,29 @@ start_time = datetime.datetime.now()
 
 """Train and test DQN"""
 
+# hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/dqn_hyperparameters/" + dqn_model_type + "/" + time_frame + "/" + str(trans_costs) + "/"
+
 # deep_hedging_env.discretized = True
 # validation_deep_hedging_env.discretized = True
 # action_size = deep_hedging_env.discretized_actions.shape[0]
-# dqn_agent = DQN.DoubleDQN(config=config, state_size=state_size, action_size=action_size)
-# dqn_train_losses = dqn_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
+# dqn_agent = DQN.DoubleDQN(config=config, state_size=state_size, action_size=action_size, double=double, dueling=dueling)
+# dqn_train_losses = dqn_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule, render=True)
 # dqn_actions, dqn_rewards, dqn_rsmse = dqn_agent.test(deep_hedging_env)
 
-# hyperparameter_path = global_path_prefix + "dqn_hyperparameters/"
-# dqn_losses = np.convolve(dqn_train_losses, np.ones(ma_size), 'valid') / ma_size
+# with open(hyperparameter_path + "dqn_train_losses_best_model.pickle", 'wb') as file:
+#         pickle.dump(dqn_train_losses, file)
+
+# with open(hyperparameter_path + "dqn_train_losses_best_model.pickle", "rb") as file:
+#         dqn_train_losses = pickle.load(file)
+
 # dqn_train_losses_fig = plt.figure(figsize=(12, 6))
-# plt.plot(dqn_losses, label="RSMSE")
-# plt.xlabel("Episodes")
+# plt.plot(dqn_train_losses, label="RSMSE")
+# plt.xlabel("Episodes (1000s)")
 # plt.ylabel("RSMSE")
 # plt.legend()
 # plt.grid(which="both")
-# plt.title("RSMSE " + str(ma_size) + " Episode Moving Average for DQN")
-# plt.savefig(hyperparameter_path + "dqn_train_losses.png")
+# plt.title("Validation RSMSE for DQN")
+# plt.savefig(hyperparameter_path + "dqn_train_losses_best_model.png")
 # plt.close()
 
 # print("DQN RSMSE: " + str(dqn_rsmse))
@@ -278,22 +298,28 @@ start_time = datetime.datetime.now()
 
 """Train and test PPO"""
 
+# hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/ppo_hyperparameters/" + time_frame + "/" + str(trans_costs) + "/"
+
 # deep_hedging_env.discretized = False
 # validation_deep_hedging_env.discretized = False
 # ppo_agent = PPO.PPO(config=config, state_size=state_size, action_size=1)
-# ppo_train_losses = ppo_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
+# ppo_train_losses = ppo_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule, render=True)
 # ppo_actions, ppo_rewards, ppo_rsmse = ppo_agent.test(deep_hedging_env)
 
-# hyperparameter_path = global_path_prefix + "ppo_hyperparameters/"
-# ppo_losses = np.convolve(ppo_train_losses[200:], np.ones(ma_size), 'valid') / ma_size
+# with open(hyperparameter_path + "ppo_train_losses_best_model.pickle", 'wb') as file:
+#         pickle.dump(ppo_train_losses, file)
+
+# with open(hyperparameter_path + "ppo_train_losses_best_model.pickle", "rb") as file:
+#         ppo_train_losses = pickle.load(file)
+
 # ppo_train_losses_fig = plt.figure(figsize=(12, 6))
-# plt.plot(ppo_losses, label="RSMSE")
+# plt.plot(ppo_train_losses, label="RSMSE")
 # plt.xlabel("Episodes")
 # plt.ylabel("RSMSE")
 # plt.legend()
 # plt.grid(which="both")
-# plt.title("RSMSE " + str(ma_size) + " Episode Moving Average for PPO")
-# plt.savefig(hyperparameter_path + "ppo_train_losses.png")
+# plt.title("Validation RSMSE for PPO")
+# plt.savefig(hyperparameter_path + "ppo_train_losses_best_model.png")
 # plt.close()
 
 # print("PROXIMAL POLICY OPTIMIZATION RSMSE: " + str(ppo_rsmse))
@@ -308,22 +334,28 @@ start_time = datetime.datetime.now()
 
 """Train and test DDPG"""
 
+# hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/ddpg_hyperparameters/" + ddpg_model_type + "/" + time_frame + "/" + str(trans_costs) + "/"
+
 # deep_hedging_env.discretized = False
 # validation_deep_hedging_env.discretized = False
-# ddpg_agent = DDPG.DDPG(config=config, state_size=state_size, action_size=1, twin_delayed=True)
-# ddpg_train_losses = ddpg_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
+# ddpg_agent = DDPG.DDPG(config=config, state_size=state_size, action_size=1, twin_delayed=twin_delayed)
+# ddpg_train_losses = ddpg_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule, render=True)
 # ddpg_actions, ddpg_rewards, ddpg_rsmse = ddpg_agent.test(deep_hedging_env)
 
-# hyperparameter_path = global_path_prefix + "ddpg_hyperparameters/"
-# ddpg_losses = np.convolve(ddpg_train_losses, np.ones(ma_size), 'valid') / ma_size
+# with open(hyperparameter_path + "ddpg_train_losses_best_model.pickle", 'wb') as file:
+#         pickle.dump(ddpg_train_losses, file)
+
+# with open(hyperparameter_path + "ddpg_train_losses_best_model.pickle", "rb") as file:
+#         ddpg_train_losses = pickle.load(file)
+
 # ddpg_train_losses_fig = plt.figure(figsize=(12, 6))
-# plt.plot(ddpg_losses, label="RSMSE")
+# plt.plot(ddpg_train_losses, label="RSMSE")
 # plt.xlabel("Episodes")
 # plt.ylabel("RSMSE")
 # plt.legend()
 # plt.grid(which="both")
-# plt.title("RSMSE " + str(ma_size) + " Episode Moving Average for DDPG")
-# plt.savefig(hyperparameter_path + "ddpg_train_losses.png")
+# plt.title("Validation RSMSE for DDPG")
+# plt.savefig(hyperparameter_path + "ddpg_train_losses_best_model.png")
 # plt.close()
 
 # print("DDPG OPTIMIZATION RSMSE: " + str(ddpg_rsmse))
@@ -360,7 +392,7 @@ def train_pg(config):
     env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
                                                         nbs_shares, light, train_set=train_set, test_set=test_set, trans_costs=trans_costs, discretized=False)
     val_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                            nbs_shares, light, train_set=val_set, test_set=test_set, trans_costs=trans_costs, discretized=False)
+                                                            nbs_shares, light, train_set=val_set, test_set=val_set, trans_costs=trans_costs, discretized=False)
     
     model = PG.PG(config, state_size, action_size=1)
     train_losses = model.train(env, val_env, BS_rsmse=rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
@@ -389,7 +421,7 @@ def train_dqn(config):
     env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
                                                         nbs_shares, light, train_set=train_set, test_set=test_set, trans_costs=trans_costs, discretized=True)
     val_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                            nbs_shares, light, train_set=val_set, test_set=test_set, trans_costs=trans_costs, discretized=True)
+                                                            nbs_shares, light, train_set=val_set, test_set=val_set, trans_costs=trans_costs, discretized=True)
 
     action_size = env.discretized_actions.shape[0]
 
@@ -420,7 +452,7 @@ def train_ppo(config):
     env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
                                                         nbs_shares, light, train_set=train_set, test_set=test_set, trans_costs=trans_costs, discretized=False)
     val_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                            nbs_shares, light, train_set=val_set, test_set=test_set, trans_costs=trans_costs, discretized=False)
+                                                            nbs_shares, light, train_set=val_set, test_set=val_set, trans_costs=trans_costs, discretized=False)
 
     model = PPO.PPO(config, state_size, action_size=1)
     train_losses = model.train(env, val_env, BS_rsmse=rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
@@ -449,7 +481,7 @@ def train_ddpg(config):
     env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
                                                         nbs_shares, light, train_set=train_set, test_set=test_set, trans_costs=trans_costs, discretized=False)
     val_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                            nbs_shares, light, train_set=val_set, test_set=test_set, trans_costs=trans_costs, discretized=False)
+                                                            nbs_shares, light, train_set=val_set, test_set=val_set, trans_costs=trans_costs, discretized=False)
 
     model = DDPG.DDPG(config, state_size, action_size=1, twin_delayed=twin_delayed)
     train_losses = model.train(env, val_env, BS_rsmse=rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule)
@@ -519,15 +551,14 @@ def raytune(train_func, configs, model_name):
 """Helper method to print training losses"""
 
 def plot_training_losses(train_losses, model_name, hyperparameter_path):
-    losses = np.convolve(train_losses, np.ones(ma_size), 'valid') / ma_size
     train_losses_fig = plt.figure(figsize=(12, 6))
-    plt.plot(losses, label="RSMSE")
-    plt.xlabel("Episodes")
+    plt.plot(train_losses, label="RSMSE")
+    plt.xlabel("Episodes (1000s)")
     # plt.xscale("log")
     plt.ylabel("RSMSE")
     plt.legend()
     plt.grid(which="both")
-    plt.title("RSMSE training losses " + str(ma_size) + " episode moving average for " + str(len(train_losses)) + " episodes of " + model_name)
+    plt.title("Validation RSMSE for " + model_name)
     plt.savefig(hyperparameter_path + model_name + "_train_losses.png")
     plt.close()
 
@@ -538,7 +569,7 @@ def tune_pg():
     best_config = raytune(train_func=train_pg, configs=configs, model_name="pg")
     model = PG.PG(best_config, state_size, action_size=1)
     model.load(hyperparameter_path + "pg_model.pth")
-    _, _, rsmse = model.test(val_env)
+    _, _, rsmse = model.test(env)
 
     print("rsmse: ", rsmse)
 
@@ -553,11 +584,11 @@ def tune_dqn():
     hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/dqn_hyperparameters/" + dqn_model_type + "/" + time_frame + "/" + str(trans_costs) + "/"
     best_config = raytune(train_func=train_dqn, configs=configs, model_name="dqn")
         
-    val_env.discretized = True
+    env.discretized = True
     action_size = env.discretized_actions.shape[0]
     model = DQN.DoubleDQN(best_config, state_size, action_size=action_size, double=double, dueling=dueling)
     model.load(hyperparameter_path + "dqn_model.pth")
-    _, _, rsmse = model.test(val_env)
+    _, _, rsmse = model.test(env)
 
     print("rsmse: ", rsmse)
 
@@ -567,14 +598,14 @@ def tune_dqn():
         dqn_train_losses = pickle.load(file)
 
     plot_training_losses(dqn_train_losses, model_name="dqn", hyperparameter_path=hyperparameter_path)
-    val_env.discretized = False
+    env.discretized = False
 
 def tune_ppo():
     hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/ppo_hyperparameters/" + time_frame + "/" + str(trans_costs) + "/"
     best_config = raytune(train_func=train_ppo, configs=configs, model_name="ppo")
     model = PPO.PPO(best_config, state_size, action_size=1)
     model.load(hyperparameter_path + "ppo_model.pth")
-    _, _, rsmse = model.test(val_env)
+    _, _, rsmse = model.test(env)
 
     print("rsmse: ", rsmse)
 
@@ -590,7 +621,7 @@ def tune_ddpg():
     best_config = raytune(train_func=train_ddpg, configs=configs, model_name="ddpg")
     model = DDPG.DDPG(best_config, state_size, action_size=1)
     model.load(hyperparameter_path + "ddpg_model.pth")
-    _, _, rsmse = model.test(val_env)
+    _, _, rsmse = model.test(env)
 
     print("rsmse: ", rsmse)
 

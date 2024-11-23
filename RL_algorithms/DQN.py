@@ -135,38 +135,26 @@ class DoubleDQN:
 
         for e in range(episodes):
             state = env.reset()
-            val_state = val_env.reset(self.batch_size)
 
             done = torch.zeros(1,1)
-            val_done = torch.zeros(self.batch_size)
 
             total_reward = torch.zeros(1, device=self.device)
-            val_total_reward = torch.zeros(self.batch_size, device=self.device)
             
             while torch.all(done == 0):
 
                 action = self.act(state)
-                with torch.no_grad():
-                    val_q_values = self.model(val_state)
-                    val_action = torch.argmax(val_q_values, dim=1, keepdim=True)
 
                 next_state, reward, done = env.step(action)
-                val_next_state, val_reward, val_done = val_env.step(val_action)
 
                 reward = -torch.square(torch.where(reward > 0, reward, -0))
                 
                 self.remember(state, action, reward, next_state, done)
 
                 state = next_state
-                val_state = val_next_state
 
                 total_reward += reward
-                val_total_reward += val_reward
 
                 self.replay()
-            val_loss = torch.sqrt(torch.mean(torch.square(torch.where(val_total_reward > 0, val_total_reward, 0))))
-
-            episode_val_loss.append(val_loss.item())
 
             if self.double and e % self.target_update == 0:
                 self.update_target_model()
@@ -174,15 +162,22 @@ class DoubleDQN:
             if lr_schedule and len(self.memory) > self.batch_size:
                 self.scheduler.step()
             
+            # Compute validation losses
+            if e % 1000 == 0:
+                _, _, val_rsmse = self.test(val_env)
+                self.model.train()
+                episode_val_loss.append(val_rsmse)
+
             # decay epsilon
             if self.epsilon > self.epsilon_min:
                 self.epsilon *= self.epsilon_decay
         
             if render and e % 1000 == 0:
-                print(f"Episode {e}/{episodes-1}, Validation Loss: {val_loss.item()}")
+                print(f"Episode {e}/{episodes-1}, Validation RSMSE: {val_rsmse}")
 
-            if len(episode_val_loss) > 50000:
-                if sum(episode_val_loss[-10000:])/10000 < BS_rsmse:
+            # Early stopping
+            if len(episode_val_loss) > 3 and val_rsmse < BS_rsmse:
+                if episode_val_loss[-3] > episode_val_loss[-4] and episode_val_loss[-2] > episode_val_loss[-3] and episode_val_loss[-1] > episode_val_loss[-2]:
                     break
 
         return episode_val_loss
@@ -200,16 +195,14 @@ class DoubleDQN:
         """
         self.model.eval()
         env.test()
-        train_size = env.dataset.shape[0]
+        set_size = env.dataset.shape[0]
         num_points = env.N
-        batches = int(train_size/self.batch_size)
+        batches = int(set_size/self.batch_size)
 
         actions = torch.zeros(num_points, self.batch_size, batches, device=self.device)
         rewards = torch.zeros(self.batch_size, batches, device=self.device)
 
         total_val_reward = torch.zeros(self.batch_size, batches, device=self.device)
-
-        print("TESTING DQN: ")
 
         for batch in range(batches):
             state = env.reset(self.batch_size)  # Initialize the environment and get the initial state

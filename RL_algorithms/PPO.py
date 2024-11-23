@@ -97,8 +97,6 @@ class PPO:
 
         for episode in range(episodes):
             state = env.reset(self.batch_size)
-            val_state = val_env.reset(self.batch_size)
-            val_total_reward = torch.zeros(self.batch_size, device=self.device)
 
             done = torch.zeros(self.batch_size, device=self.device)
             rewards = torch.zeros(self.batch_size, self.N, device=self.device)
@@ -111,15 +109,6 @@ class PPO:
             # Rollout
             step = 0
             while torch.all(done == 0):
-                with torch.no_grad():
-                    mean_log_std = self.policy(val_state)
-                    mean, log_std = torch.chunk(mean_log_std, 2, dim=-1)
-
-                    val_action = mean
-                    val_next_state, val_reward, val_done = val_env.step(val_action)
-                    val_state = val_next_state
-                    val_total_reward += val_reward
-
                 with torch.no_grad():
                     action, action_log_prob, _ = self.get_action(state)
                     value = self.value(state).flatten()
@@ -134,10 +123,6 @@ class PPO:
 
                     state = next_state
                     step += 1
-            
-            val_loss = torch.sqrt(torch.mean(torch.square(torch.where(val_total_reward > 0, val_total_reward, 0))))
-
-            episode_val_loss.append(val_loss.item())
 
             # Compute advantages and returns
             returns = self.calculate_returns(rewards).to(self.device)
@@ -179,11 +164,18 @@ class PPO:
                 self.value_scheduler.step()
                 self.policy_scheduler.step()
 
+            # Compute validation losses
+            if episode % 1000 == 0:
+                _, _, val_rsmse = self.test(val_env)
+                self.policy.train()
+                episode_val_loss.append(val_rsmse)
+
             if render and episode % 1000 == 0:
-                print(f"Episode {episode}/{episodes}, Policy Loss: {loss_policy.item()}, Value Loss: {loss_value.item()}, Validation Loss: {val_loss.item()}")
-            
-            if len(episode_val_loss) > 50000:
-                if sum(episode_val_loss[-10000:])/10000 < BS_rsmse:
+                print(f"Episode {episode}/{episodes-1}, Policy Loss: {loss_policy.item()}, Value Loss: {loss_value.item()}, Validation Loss: {val_rsmse}")
+
+            # Early stopping
+            if len(episode_val_loss) > 3 and val_rsmse < BS_rsmse:
+                if episode_val_loss[-3] > episode_val_loss[-4] and episode_val_loss[-2] > episode_val_loss[-3] and episode_val_loss[-1] > episode_val_loss[-2]:
                     break
 
         return episode_val_loss
@@ -212,7 +204,6 @@ class PPO:
 
         total_val_reward = torch.zeros(self.batch_size, batches, device=self.device)
 
-        print("TESTING PPO: ")
         for batch in range(batches):
             state = env.reset(self.batch_size)
             done = torch.zeros(self.batch_size, device=self.device)
