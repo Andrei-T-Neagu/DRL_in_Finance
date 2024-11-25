@@ -9,11 +9,11 @@ from option_hedging.DeepHedgingEnvironment import DeepHedgingEnvironment
 import torch.optim.lr_scheduler as lr_scheduler
 
 class DDPG:
-    def __init__(self, config=None, state_size=3, action_size=1, num_layers=2, hidden_size=128, lr=0.0001, batch_size=128, twin_delayed=False):
+    def __init__(self, config=None, state_size=3, action_size=1, twin_delayed=False, device='cpu'):
         self.state_size = state_size            
         self.action_size = action_size
         
-        self.gamma = 1.0                                            # discount factor
+        self.gamma = 1.0                                           # discount factor
         
         self.lr = config.get("lr", 0.0001)                          # learning rate
         self.batch_size = config.get("batch_size", 128)             # batch size
@@ -27,8 +27,7 @@ class DDPG:
         # Experience replay buffer
         self.memory = deque(maxlen=10000)
 
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        # self.device = torch.device('cpu')
+        self.device = device
         # Policy network
         self.policy = FFNN(state_size, action_size, self.num_layers, self.hidden_size, policy=True).to(self.device)
         self.target_policy = FFNN(state_size, action_size, self.num_layers, self.hidden_size, policy=True).to(self.device)
@@ -219,8 +218,8 @@ class DDPG:
                 print(f"Episode {e}/{episodes-1}, Validation Loss: {val_rsmse}")
             
             # Early stopping
-            if len(episode_val_loss) > 3 and val_rsmse < BS_rsmse:
-                if episode_val_loss[-3] > episode_val_loss[-4] and episode_val_loss[-2] > episode_val_loss[-3] and episode_val_loss[-1] > episode_val_loss[-2]:
+            if len(episode_val_loss) > 10 and val_rsmse < BS_rsmse:
+                if min(episode_val_loss[:-10]) < min(episode_val_loss[-10:]):
                     break
 
         return episode_val_loss

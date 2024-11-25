@@ -8,7 +8,7 @@ class DeepHedgingEnvironment():
     
     def __init__(self, nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, 
                  position_type, strike, V_0, prepro_stock, nbs_shares, light,
-                 train_set, test_set, trans_costs = 0.0, discretized = False):
+                 train_set, test_set, trans_costs = 0.0, discretized = False, device='cpu'):
         
         self.nbs_point_traj = nbs_point_traj
         self.batch_size = 1
@@ -30,8 +30,7 @@ class DeepHedgingEnvironment():
         self.light = light
         self.trans_costs = trans_costs
         
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        # self.device = torch.device('cpu')
+        self.device = device
         self.discretized = discretized                                                                      # For if the action space is discretized
         self.discretized_actions = torch.arange(start=-0.5, end=2.0, step=0.05, device=self.device)
 

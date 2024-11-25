@@ -7,7 +7,7 @@ from option_hedging.DeepHedgingEnvironment import DeepHedgingEnvironment
 import torch.optim.lr_scheduler as lr_scheduler
 
 class PPO:
-    def __init__(self, config, state_size=3, action_size=1, clip_eps=0.2, epochs=10):
+    def __init__(self, config, state_size=3, action_size=1, clip_eps=0.2, epochs=10, device='cpu'):
         
         self.lr = config.get("lr", 0.0001)                          # learning rate
         self.batch_size = config.get("batch_size", 128)             # batch size
@@ -20,8 +20,7 @@ class PPO:
         self.clip_eps = clip_eps                # clipping factor of the gradient estimate
         self.epochs = epochs                    # number of epochs
 
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        # self.device = torch.device('cpu')
+        self.device = device
         # Policy network
         self.policy = FFNN(state_size, action_size * 2, self.num_layers, self.hidden_size, log_predicted=True).to(self.device) # Output mean and log_std
         # Value network
@@ -174,8 +173,8 @@ class PPO:
                 print(f"Episode {episode}/{episodes-1}, Policy Loss: {loss_policy.item()}, Value Loss: {loss_value.item()}, Validation Loss: {val_rsmse}")
 
             # Early stopping
-            if len(episode_val_loss) > 3 and val_rsmse < BS_rsmse:
-                if episode_val_loss[-3] > episode_val_loss[-4] and episode_val_loss[-2] > episode_val_loss[-3] and episode_val_loss[-1] > episode_val_loss[-2]:
+            if len(episode_val_loss) > 10 and val_rsmse < BS_rsmse:
+                if min(episode_val_loss[:-10]) < min(episode_val_loss[-10:]):
                     break
 
         return episode_val_loss

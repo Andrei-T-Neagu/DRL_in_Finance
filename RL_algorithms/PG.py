@@ -25,7 +25,7 @@ class PG:
     Returns:
     - None
     """
-    def __init__(self, config, state_size, action_size, gamma = 1.0):
+    def __init__(self, config, state_size, action_size, gamma = 1.0, device='cpu'):
         self.state_size = state_size
         self.action_size = action_size
 
@@ -36,8 +36,7 @@ class PG:
  
         self.gamma = gamma                      # Discount factor for the reward
         # Main and target networks
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        # self.device = torch.device('cpu')
+        self.device = device
         self.model = FFNN(in_features=state_size, out_features=action_size, num_layers=self.num_layers, hidden_size=self.hidden_size).to(self.device)
         self.model.apply(self.init_weights)
         
@@ -146,8 +145,8 @@ class PG:
                 print(f"Episode {e}/{episodes-1}, Validation RSMSE: {val_rsmse}")
         
             # Early stopping
-            if len(episode_val_loss) > 3 and val_rsmse < BS_rsmse:
-                if episode_val_loss[-3] > episode_val_loss[-4] and episode_val_loss[-2] > episode_val_loss[-3] and episode_val_loss[-1] > episode_val_loss[-2]:
+            if len(episode_val_loss) > 10 and val_rsmse < BS_rsmse:
+                if min(episode_val_loss[:-10]) < min(episode_val_loss[-10:]):
                     break
 
         return episode_val_loss

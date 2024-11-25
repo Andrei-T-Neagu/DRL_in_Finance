@@ -10,10 +10,10 @@ import torch.optim.lr_scheduler as lr_scheduler
 
 # Double DQN agent
 class DoubleDQN:
-    def __init__(self, config, state_size, action_size, epsilon=1.0, epsilon_min=0.05, target_update=1, tau=0.1, double=True, dueling=False):
+    def __init__(self, config, state_size, action_size, epsilon=1.0, epsilon_min=0.05, target_update=1, tau=0.1, double=True, dueling=False, device='cpu'):
         self.state_size = state_size
         self.action_size = action_size
-        self.gamma = 1.0                      # discount factor
+        self.gamma = 1.0                        # discount factor
         self.epsilon = epsilon                  # epsilon from epsilon-greedy action selection (random action taken with probability epsilon)
         self.epsilon_min = epsilon_min          # minimum value for epsilon
 
@@ -28,8 +28,7 @@ class DoubleDQN:
         self.double = double
 
         # Main and target networks
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        # self.device = torch.device('cpu')
+        self.device = device
         self.model = FFNN(in_features=state_size, out_features=action_size, num_layers=self.num_layers, hidden_size=self.hidden_size, dueling=dueling).to(self.device)
         self.model.apply(self.init_weights)
         
@@ -176,8 +175,8 @@ class DoubleDQN:
                 print(f"Episode {e}/{episodes-1}, Validation RSMSE: {val_rsmse}")
 
             # Early stopping
-            if len(episode_val_loss) > 3 and val_rsmse < BS_rsmse:
-                if episode_val_loss[-3] > episode_val_loss[-4] and episode_val_loss[-2] > episode_val_loss[-3] and episode_val_loss[-1] > episode_val_loss[-2]:
+            if len(episode_val_loss) > 10 and val_rsmse < BS_rsmse:
+                if min(episode_val_loss[:-10]) < min(episode_val_loss[-10:]):
                     break
 
         return episode_val_loss
