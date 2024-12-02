@@ -24,14 +24,14 @@ import tempfile
 import shutil
 import subprocess
 
-episodes = 200000
+episodes = 1000000
 trans_costs = 0.00              #proportional transaction costs 0.0 or 0.01
 twin_delayed=False
-double=False
-dueling=False
+double=True
+dueling=True
 T = 252/252
 
-cpu = True
+cpu = False
 cpus = 1
 num_gpus = 1
 gpus = 0.05
@@ -196,7 +196,6 @@ semi_square_hedging_err_DH = np.square(np.where(hedging_err_DH > 0, hedging_err_
 smse_DH = np.mean(semi_square_hedging_err_DH)
 rsmse_DH = np.sqrt(np.mean(semi_square_hedging_err_DH))
 
-
 print(" ----------------- ")
 print("Leland Delta Hedging Results")
 print(" ----------------- ")
@@ -217,9 +216,16 @@ deep_hedging_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj,
                                                                  nbs_shares, light, train_set=train_set, test_set=test_set, trans_costs=trans_costs, discretized=False, device=device)
 
 validation_deep_hedging_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                                     nbs_shares, light, train_set=val_set, test_set=val_set, trans_costs=trans_costs, discretized=False, device=device)
+                                                                     nbs_shares, light, train_set=test_set, test_set=test_set, trans_costs=trans_costs, discretized=False, device=device)
 
 """Train and test PG"""
+
+# config={
+#     "lr": 0.00100,
+#     "batch_size": 256,
+#     "num_layers": 3,
+#     "hidden_size": 128,
+# }
 
 # hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/pg_hyperparameters/" + time_frame + "/" + str(trans_costs) + "/"
 
@@ -228,14 +234,18 @@ validation_deep_hedging_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_
 # pg_agent = PG.PG(config=config, state_size=state_size, action_size=1, device=device)
 # start_time = datetime.datetime.now()
 # pg_train_losses = pg_agent.train(deep_hedging_env, validation_deep_hedging_env, episodes=episodes, BS_rsmse=rsmse_DH_leland, lr_schedule=lr_schedule, render=True)
+# time_taken = str(datetime.datetime.now() - start_time)
 # pg_actions, pg_rewards, pg_rsmse = pg_agent.test(deep_hedging_env)
-# print("TIME TAKEN: ", datetime.datetime.now() - start_time)
+
+# print("TIME TAKEN: ", time_taken)
+# with open(hyperparameter_path + "pg_time_taken_best_model.txt", 'w') as file:
+#     file.write(time_taken)
 
 # with open(hyperparameter_path + "pg_train_losses_best_model.pickle", 'wb') as file:
-#         pickle.dump(pg_train_losses, file)
+#     pickle.dump(pg_train_losses, file)
 
 # with open(hyperparameter_path + "pg_train_losses_best_model.pickle", "rb") as file:
-#         pg_train_losses = pickle.load(file)
+#     pg_train_losses = pickle.load(file)
 
 # pg_train_losses_fig = plt.figure(figsize=(12, 6))
 # plt.plot(pg_train_losses, label="RSMSE")
@@ -243,7 +253,7 @@ validation_deep_hedging_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_
 # plt.ylabel("RSMSE")
 # plt.legend()
 # plt.grid(which="both")
-# plt.title("Validation RSMSE for PG")
+# plt.title("Testing RSMSE for PG")
 # plt.savefig(hyperparameter_path + "pg_train_losses_best_model.png")
 # plt.close()
 
@@ -259,42 +269,53 @@ validation_deep_hedging_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_
 
 """Train and test DQN"""
 
-# hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/dqn_hyperparameters/" + dqn_model_type + "/" + time_frame + "/" + str(trans_costs) + "/"
+config={
+    "lr": 0.00001,
+    "batch_size": 128,
+    "num_layers": 4,
+    "hidden_size": 128,
+}
 
-# deep_hedging_env.discretized = True
-# validation_deep_hedging_env.discretized = True
-# action_size = deep_hedging_env.discretized_actions.shape[0]
-# dqn_agent = DQN.DoubleDQN(config=config, state_size=state_size, action_size=action_size, double=double, dueling=dueling, device=device)
-# start_time = datetime.datetime.now()
-# dqn_train_losses = dqn_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule, render=True)
-# dqn_actions, dqn_rewards, dqn_rsmse = dqn_agent.test(deep_hedging_env)
-# print("TIME TAKEN: ", datetime.datetime.now() - start_time)
+hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/dqn_hyperparameters/" + dqn_model_type + "/" + time_frame + "/" + str(trans_costs) + "/"
 
-# with open(hyperparameter_path + "dqn_train_losses_best_model.pickle", 'wb') as file:
-#         pickle.dump(dqn_train_losses, file)
+deep_hedging_env.discretized = True
+validation_deep_hedging_env.discretized = True
+action_size = deep_hedging_env.discretized_actions.shape[0]
+dqn_agent = DQN.DoubleDQN(config=config, state_size=state_size, action_size=action_size, double=double, dueling=dueling, device=device)
+start_time = datetime.datetime.now()
+dqn_train_losses = dqn_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule, render=True)
+time_taken = str(datetime.datetime.now() - start_time)
+dqn_actions, dqn_rewards, dqn_rsmse = dqn_agent.test(deep_hedging_env)
 
-# with open(hyperparameter_path + "dqn_train_losses_best_model.pickle", "rb") as file:
-#         dqn_train_losses = pickle.load(file)
+print("TIME TAKEN: ", time_taken)
+with open(hyperparameter_path + "dqn_time_taken_best_model.txt", 'w') as file:
+    file.write(time_taken)
 
-# dqn_train_losses_fig = plt.figure(figsize=(12, 6))
-# plt.plot(dqn_train_losses, label="RSMSE")
-# plt.xlabel("Episodes (1000s)")
-# plt.ylabel("RSMSE")
-# plt.legend()
-# plt.grid(which="both")
-# plt.title("Validation RSMSE for DQN")
-# plt.savefig(hyperparameter_path + "dqn_train_losses_best_model.png")
-# plt.close()
+with open(hyperparameter_path + "dqn_train_losses_best_model.pickle", 'wb') as file:
+        pickle.dump(dqn_train_losses, file)
 
-# print("DQN RSMSE: " + str(dqn_rsmse))
+with open(hyperparameter_path + "dqn_train_losses_best_model.pickle", "rb") as file:
+        dqn_train_losses = pickle.load(file)
 
-# dqn_actions = dqn_actions.cpu().detach().numpy()
-# dqn_rewards = dqn_rewards.cpu().detach().numpy()
+dqn_train_losses_fig = plt.figure(figsize=(12, 6))
+plt.plot(dqn_train_losses, label="RSMSE")
+plt.xlabel("Episodes (1000s)")
+plt.ylabel("RSMSE")
+plt.legend()
+plt.grid(which="both")
+plt.title("Testing RSMSE for DQN")
+plt.savefig(hyperparameter_path + "dqn_train_losses_best_model.png")
+plt.close()
 
-# print(" ----------------- ")
-# print(" DQN Results")
-# print(" ----------------- ")
-# Utils_general.print_stats(dqn_rewards, dqn_actions, "RSMSE", "DQN", V_0)
+print("DQN RSMSE: " + str(dqn_rsmse))
+
+dqn_actions = dqn_actions.cpu().detach().numpy()
+dqn_rewards = dqn_rewards.cpu().detach().numpy()
+
+print(" ----------------- ")
+print(" DQN Results")
+print(" ----------------- ")
+Utils_general.print_stats(dqn_rewards, dqn_actions, "RSMSE", "DQN", V_0)
 
 """Train and test PPO"""
 
@@ -383,6 +404,13 @@ configs={
     "num_layers": tune.grid_search([2, 3, 4]),
     "hidden_size": tune.grid_search([64, 128, 256])
 }
+
+# configs={
+#     "lr": tune.grid_search([0.001, 0.0001, 0.00001]),
+#     "batch_size": tune.grid_search([256, 512, 1024]),
+#     "num_layers": tune.grid_search([3, 4]),
+#     "hidden_size": tune.grid_search([64, 128, 256])
+# }
 
 def train_pg(config):
     torch.manual_seed(0)
@@ -640,7 +668,7 @@ def tune_ddpg():
 
 
 
-tune_ppo()
+# tune_dqn()
 
 
 
@@ -661,7 +689,6 @@ Utils_general.print_stats(hedging_err_DH, deltas_DH, "Delta hedge", "Delta hedge
 semi_square_hedging_err_DH = np.square(np.where(hedging_err_DH > 0, hedging_err_DH, 0))
 smse_DH = np.mean(semi_square_hedging_err_DH)
 rsmse_DH = np.sqrt(np.mean(semi_square_hedging_err_DH))
-
 
 print(" ----------------- ")
 print("Leland Delta Hedging Results")

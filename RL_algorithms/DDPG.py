@@ -214,7 +214,7 @@ class DDPG:
                 self.policy.train()
                 episode_val_loss.append(val_rsmse)
 
-            if render and e % 1000 == 0:
+            if render and e % 10000 == 0:
                 print(f"Episode {e}/{episodes-1}, Validation Loss: {val_rsmse}")
             
             # Early stopping

@@ -128,7 +128,7 @@ class DoubleDQN:
         self.epsilon_decay = (episodes-10)/episodes
 
         if lr_schedule:
-            self.scheduler = lr_scheduler.LinearLR(self.optimizer, start_factor=1.0, end_factor=0.1, total_iters=episodes)
+            self.scheduler = lr_scheduler.LinearLR(self.optimizer, start_factor=1.0, end_factor=0.0001, total_iters=episodes)
 
         print("TRAINING DQN: ")
 
@@ -171,7 +171,7 @@ class DoubleDQN:
             if self.epsilon > self.epsilon_min:
                 self.epsilon *= self.epsilon_decay
         
-            if render and e % 1000 == 0:
+            if render and e % 10000 == 0:
                 print(f"Episode {e}/{episodes-1}, Validation RSMSE: {val_rsmse}")
 
             # Early stopping

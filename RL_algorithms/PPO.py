@@ -169,7 +169,7 @@ class PPO:
                 self.policy.train()
                 episode_val_loss.append(val_rsmse)
 
-            if render and episode % 1000 == 0:
+            if render and episode % 10000 == 0:
                 print(f"Episode {episode}/{episodes-1}, Policy Loss: {loss_policy.item()}, Value Loss: {loss_value.item()}, Validation Loss: {val_rsmse}")
 
             # Early stopping

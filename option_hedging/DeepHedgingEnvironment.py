@@ -122,7 +122,7 @@ class DeepHedgingEnvironment():
         """
         # un-normalize price
         self.S_t = self.inverse_processing(self.S_t)
-
+        
         # When actions are discretized
         if self.discretized:
             self.delta_t_next = self.discretized_actions[action]                            # torch.Tensor of size [self.batch_size]. Action to be taken at next time step     
@@ -139,13 +139,11 @@ class DeepHedgingEnvironment():
             diff_delta_t = self.delta_t_next - self.delta_t
             cashflow = self.liquid_func(self.S_t, -diff_delta_t)
             self.M_t = self.int_rate_bank(self.M_t) + cashflow  # time-t amount in cash reserve
-
-        # Update features for next time step (market impact persistence already updated)
+        
         # Update stock price
-
         batch = self.dataset[self.path*self.batch_size:(self.path+1)*self.batch_size,:]     # torch.Tensor of size [self.batch_size, self.N] representing a batch of price paths
         self.S_t = batch[:,self.t+1]                                                        # torch.Tensor of size [self.batch_size] representing a batch of prices at the next time step
-        
+
         # Liquidation portfolio value
         L_t = self.liquid_func(self.S_t, self.delta_t_next)     # torch.Tensor of size [self.batch_size]. Revenue from liquidating
         self.V_t = self.int_rate_bank(self.M_t) + L_t                               # torch.Tensor of size [self.batch_size]. Portfolio value.

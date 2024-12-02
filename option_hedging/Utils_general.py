@@ -250,8 +250,6 @@ def delta_hedge_res(St_traj, r_borrow, r_lend, sigma, T, option_type, position_t
         sigma = sigma*math.sqrt(1+math.sqrt(2/math.pi)*(trans_costs/(sigma*math.sqrt(delta_t))))
 
     V_t = np.zeros(St_traj.shape)
-    A_t = np.zeros(St_traj.shape)
-    B_t = np.zeros(St_traj.shape)
 
     deltas = np.zeros([N, nb_traj])
 
@@ -304,7 +302,7 @@ def delta_hedge_res(St_traj, r_borrow, r_lend, sigma, T, option_type, position_t
                                     Y_t + liquid_func(St_traj[-1, :], deltas[-1, :], trans_costs))
 
     hedging_err = -hedging_gain
-
+    
     return deltas, hedging_err
 
 # Function to compute delta-hedging results
