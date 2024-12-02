@@ -89,8 +89,8 @@ class PPO:
         episode_val_loss = []
 
         if lr_schedule:
-            self.value_scheduler = lr_scheduler.LinearLR(self.value_optimizer, start_factor=1.0, end_factor=0.1, total_iters=episodes)
-            self.policy_scheduler = lr_scheduler.LinearLR(self.policy_optimizer, start_factor=1.0, end_factor=0.1, total_iters=episodes)
+            self.value_scheduler = lr_scheduler.LinearLR(self.value_optimizer, start_factor=1.0, end_factor=0.005, total_iters=episodes)
+            self.policy_scheduler = lr_scheduler.LinearLR(self.policy_optimizer, start_factor=1.0, end_factor=0.005, total_iters=episodes)
         
         print("TRAINING PPO")
 

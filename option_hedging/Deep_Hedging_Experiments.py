@@ -24,7 +24,7 @@ import tempfile
 import shutil
 import subprocess
 
-episodes = 1000000
+episodes = 500000
 trans_costs = 0.00              #proportional transaction costs 0.0 or 0.01
 twin_delayed=False
 double=True

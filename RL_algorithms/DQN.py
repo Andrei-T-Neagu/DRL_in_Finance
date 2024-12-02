@@ -128,7 +128,7 @@ class DoubleDQN:
         self.epsilon_decay = (episodes-10)/episodes
 
         if lr_schedule:
-            self.scheduler = lr_scheduler.LinearLR(self.optimizer, start_factor=1.0, end_factor=0.0001, total_iters=episodes)
+            self.scheduler = lr_scheduler.LinearLR(self.optimizer, start_factor=1.0, end_factor=0.005, total_iters=episodes)
 
         print("TRAINING DQN: ")
 
