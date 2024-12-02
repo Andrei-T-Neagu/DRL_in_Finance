@@ -35,7 +35,7 @@ cpu = True
 cpus = 1
 num_gpus = 1
 gpus = 0.05
-subprocess.Popen("nvidia-smi")
+
 
 global_path_prefix = os.getcwd()+"/"
 
@@ -640,7 +640,7 @@ def tune_ddpg():
 
 
 
-tune_dqn()
+tune_ppo()
 
 
 
