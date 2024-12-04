@@ -173,9 +173,9 @@ class PPO:
                 print(f"Episode {episode}/{episodes-1}, Policy Loss: {loss_policy.item()}, Value Loss: {loss_value.item()}, Validation Loss: {val_rsmse}")
 
             # Early stopping
-            if len(episode_val_loss) > 10 and val_rsmse < BS_rsmse:
-                if min(episode_val_loss[:-10]) < min(episode_val_loss[-10:]):
-                    break
+            # if len(episode_val_loss) > 10 and val_rsmse < BS_rsmse:
+            #     if min(episode_val_loss[:-10]) < min(episode_val_loss[-10:]):
+            #         break
 
         return episode_val_loss
 
