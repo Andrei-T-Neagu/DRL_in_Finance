@@ -28,8 +28,8 @@ start_total_time = datetime.datetime.now()
 episodes = 500000
 trans_costs = 0.00              #proportional transaction costs 0.0 or 0.01
 twin_delayed=False
-double=False
-dueling=False
+double=True
+dueling=True
 T = 252/252
 
 cpu = False
@@ -271,54 +271,54 @@ Utils_general.print_stats(pg_rewards, pg_actions, "RSMSE", "Policy Gradient", V_
 
 """Train and test DQN"""
 
-# config={
-#     "lr": 0.0001,
-#     "batch_size": 256,
-#     "num_layers": 3,
-#     "hidden_size": 64,
-# }
+config={
+    "lr": 0.00001,
+    "batch_size": 128,
+    "num_layers": 4,
+    "hidden_size": 128,
+}
 
-# hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/dqn_hyperparameters/" + dqn_model_type + "/" + time_frame + "/" + str(trans_costs) + "/"
+hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/dqn_hyperparameters/" + dqn_model_type + "/" + time_frame + "/" + str(trans_costs) + "/"
 
-# deep_hedging_env.discretized = True
-# validation_deep_hedging_env.discretized = True
-# action_size = deep_hedging_env.discretized_actions.shape[0]
-# dqn_agent = DQN.DoubleDQN(config=config, state_size=state_size, action_size=action_size, double=double, dueling=dueling, device=device)
-# start_time = datetime.datetime.now()
-# dqn_train_losses = dqn_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule, render=True)
-# time_taken = str(datetime.datetime.now() - start_time)
-# dqn_agent.save(hyperparameter_path + "best_dqn_model.pth")
-# dqn_actions, dqn_rewards, dqn_rsmse = dqn_agent.test(deep_hedging_env)
+deep_hedging_env.discretized = True
+validation_deep_hedging_env.discretized = True
+action_size = deep_hedging_env.discretized_actions.shape[0]
+dqn_agent = DQN.DoubleDQN(config=config, state_size=state_size, action_size=action_size, double=double, dueling=dueling, device=device)
+start_time = datetime.datetime.now()
+dqn_train_losses = dqn_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule, render=True)
+time_taken = str(datetime.datetime.now() - start_time)
+dqn_agent.save(hyperparameter_path + "best_dqn_model.pth")
+dqn_actions, dqn_rewards, dqn_rsmse = dqn_agent.test(deep_hedging_env)
 
-# print("TIME TAKEN: ", time_taken)
-# with open(hyperparameter_path + "dqn_time_taken_best_model.txt", 'w') as file:
-#     file.write(time_taken)
+print("TIME TAKEN: ", time_taken)
+with open(hyperparameter_path + "dqn_time_taken_best_model.txt", 'w') as file:
+    file.write(time_taken)
 
-# with open(hyperparameter_path + "dqn_train_losses_best_model.pickle", 'wb') as file:
-#         pickle.dump(dqn_train_losses, file)
+with open(hyperparameter_path + "dqn_train_losses_best_model.pickle", 'wb') as file:
+        pickle.dump(dqn_train_losses, file)
 
-# with open(hyperparameter_path + "dqn_train_losses_best_model.pickle", "rb") as file:
-#         dqn_train_losses = pickle.load(file)
+with open(hyperparameter_path + "dqn_train_losses_best_model.pickle", "rb") as file:
+        dqn_train_losses = pickle.load(file)
 
-# dqn_train_losses_fig = plt.figure(figsize=(12, 6))
-# plt.plot(dqn_train_losses, label="RSMSE")
-# plt.xlabel("Episodes (1000s)")
-# plt.ylabel("RSMSE")
-# plt.legend()
-# plt.grid(which="both")
-# plt.title("Testing RSMSE for DQN")
-# plt.savefig(hyperparameter_path + "dqn_train_losses_best_model.png")
-# plt.close()
+dqn_train_losses_fig = plt.figure(figsize=(12, 6))
+plt.plot(dqn_train_losses, label="RSMSE")
+plt.xlabel("Episodes (1000s)")
+plt.ylabel("RSMSE")
+plt.legend()
+plt.grid(which="both")
+plt.title("Testing RSMSE for DQN")
+plt.savefig(hyperparameter_path + "dqn_train_losses_best_model.png")
+plt.close()
 
-# print("DQN RSMSE: " + str(dqn_rsmse))
+print("DQN RSMSE: " + str(dqn_rsmse))
 
-# dqn_actions = dqn_actions.cpu().detach().numpy()
-# dqn_rewards = dqn_rewards.cpu().detach().numpy()
+dqn_actions = dqn_actions.cpu().detach().numpy()
+dqn_rewards = dqn_rewards.cpu().detach().numpy()
 
-# print(" ----------------- ")
-# print(" DQN Results")
-# print(" ----------------- ")
-# Utils_general.print_stats(dqn_rewards, dqn_actions, "RSMSE", "DQN", V_0)
+print(" ----------------- ")
+print(" DQN Results")
+print(" ----------------- ")
+Utils_general.print_stats(dqn_rewards, dqn_actions, "RSMSE", "DQN", V_0)
 
 """Train and test PPO"""
 
@@ -331,57 +331,44 @@ config={
 
 hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/ppo_hyperparameters/" + time_frame + "/" + str(trans_costs) + "/"
 
-# with open(hyperparameter_path + "train_losses/ppo_train_losses_lr=1e-05|batch_size=256|num_layers=2|hidden_size=256.pickle", "rb") as file:
-#         ppo_train_losses = pickle.load(file)
+deep_hedging_env.discretized = False
+validation_deep_hedging_env.discretized = False
+ppo_agent = PPO.PPO(config=config, state_size=state_size, action_size=1, device=device)
+start_time = datetime.datetime.now()
+ppo_train_losses = ppo_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule, render=True)
+time_taken = str(datetime.datetime.now() - start_time)
+ppo_agent.save(hyperparameter_path + "best_ppo_model.pth")
+ppo_actions, ppo_rewards, ppo_rsmse = ppo_agent.test(deep_hedging_env)
 
-# ppo_train_losses_fig = plt.figure(figsize=(12, 6))
-# plt.plot(ppo_train_losses[1:], label="RSMSE")
-# plt.xlabel("Episodes")
-# plt.ylabel("RSMSE")
-# plt.legend()
-# plt.grid(which="both")
-# plt.title("Validation RSMSE for PPO")
-# plt.savefig(hyperparameter_path + "ppo_train_OTHER_BEST_MODEL.png")
-# plt.close()
+print("TIME TAKEN: ", time_taken)
+with open(hyperparameter_path + "ppo_time_taken_best_model.txt", 'w') as file:
+    file.write(time_taken)
 
-# deep_hedging_env.discretized = False
-# validation_deep_hedging_env.discretized = False
-# ppo_agent = PPO.PPO(config=config, state_size=state_size, action_size=1, device=device)
-# start_time = datetime.datetime.now()
-# ppo_train_losses = ppo_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule, render=True)
-# time_taken = str(datetime.datetime.now() - start_time)
-# ppo_agent.save(hyperparameter_path + "best_ppo_model.pth")
-# ppo_actions, ppo_rewards, ppo_rsmse = ppo_agent.test(deep_hedging_env)
+with open(hyperparameter_path + "ppo_train_losses_best_model.pickle", 'wb') as file:
+        pickle.dump(ppo_train_losses, file)
 
-# print("TIME TAKEN: ", time_taken)
-# with open(hyperparameter_path + "ppo_time_taken_best_model.txt", 'w') as file:
-#     file.write(time_taken)
+with open(hyperparameter_path + "ppo_train_losses_best_model.pickle", "rb") as file:
+        ppo_train_losses = pickle.load(file)
 
-# with open(hyperparameter_path + "ppo_train_losses_best_model.pickle", 'wb') as file:
-#         pickle.dump(ppo_train_losses, file)
+ppo_train_losses_fig = plt.figure(figsize=(12, 6))
+plt.plot(ppo_train_losses, label="RSMSE")
+plt.xlabel("Episodes")
+plt.ylabel("RSMSE")
+plt.legend()
+plt.grid(which="both")
+plt.title("Validation RSMSE for PPO")
+plt.savefig(hyperparameter_path + "ppo_train_losses_best_model.png")
+plt.close()
 
-# with open(hyperparameter_path + "ppo_train_losses_best_model.pickle", "rb") as file:
-#         ppo_train_losses = pickle.load(file)
+print("PROXIMAL POLICY OPTIMIZATION RSMSE: " + str(ppo_rsmse))
 
-# ppo_train_losses_fig = plt.figure(figsize=(12, 6))
-# plt.plot(ppo_train_losses, label="RSMSE")
-# plt.xlabel("Episodes")
-# plt.ylabel("RSMSE")
-# plt.legend()
-# plt.grid(which="both")
-# plt.title("Validation RSMSE for PPO")
-# plt.savefig(hyperparameter_path + "ppo_train_losses_best_model.png")
-# plt.close()
+ppo_actions = ppo_actions.cpu().detach().numpy()
+ppo_rewards = ppo_rewards.cpu().detach().numpy()
 
-# print("PROXIMAL POLICY OPTIMIZATION RSMSE: " + str(ppo_rsmse))
-
-# ppo_actions = ppo_actions.cpu().detach().numpy()
-# ppo_rewards = ppo_rewards.cpu().detach().numpy()
-
-# print(" ----------------- ")
-# print(" Proximal Policy Optimization Results")
-# print(" ----------------- ")
-# Utils_general.print_stats(ppo_rewards, ppo_actions, "RSMSE", "Proximal Policy Optimization", V_0)
+print(" ----------------- ")
+print(" Proximal Policy Optimization Results")
+print(" ----------------- ")
+Utils_general.print_stats(ppo_rewards, ppo_actions, "RSMSE", "Proximal Policy Optimization", V_0)
 
 """Train and test DDPG"""
 
