@@ -145,6 +145,8 @@ class PG:
                 print(f"Episode {e}/{episodes-1}, Validation RSMSE: {val_rsmse}")
         
             # Early stopping
+            if e >= 90000:
+                break 
             # if len(episode_val_loss) > 10 and val_rsmse < BS_rsmse:
             #     if min(episode_val_loss[:-10]) < min(episode_val_loss[-10:]):
             #         break
