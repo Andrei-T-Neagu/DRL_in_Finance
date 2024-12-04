@@ -24,7 +24,7 @@ import tempfile
 import shutil
 import subprocess
 
-episodes = 2000
+episodes = 500000
 trans_costs = 0.00              #proportional transaction costs 0.0 or 0.01
 twin_delayed=False
 double=False
@@ -35,7 +35,7 @@ cpu = False
 cpus = 1
 num_gpus = 1
 gpus = 0.05
-
+subprocess.Popen("nvidia-smi")
 
 global_path_prefix = os.getcwd()+"/"
 
