@@ -28,8 +28,8 @@ start_total_time = datetime.datetime.now()
 episodes = 500000
 trans_costs = 0.00              #proportional transaction costs 0.0 or 0.01
 twin_delayed=True
-double=True
-dueling=False
+double=False
+dueling=True
 T = 252/252
 
 cpu = False
@@ -221,61 +221,61 @@ validation_deep_hedging_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_
 
 """Train and test PG"""
 
-config={
-    "lr": 0.00100,
-    "batch_size": 256,
-    "num_layers": 3,
-    "hidden_size": 128,
-}
+# config={
+#     "lr": 0.00100,
+#     "batch_size": 256,
+#     "num_layers": 3,
+#     "hidden_size": 128,
+# }
 
-hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/pg_hyperparameters/" + time_frame + "/" + str(trans_costs) + "/"
+# hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/pg_hyperparameters/" + time_frame + "/" + str(trans_costs) + "/"
 
-deep_hedging_env.discretized = False
-validation_deep_hedging_env.discretized = False
-pg_agent = PG.PG(config=config, state_size=state_size, action_size=1, device=device)
-start_time = datetime.datetime.now()
-pg_train_losses = pg_agent.train(deep_hedging_env, validation_deep_hedging_env, episodes=episodes, BS_rsmse=rsmse_DH_leland, lr_schedule=lr_schedule, render=True)
-time_taken = str(datetime.datetime.now() - start_time)
-pg_agent.save(hyperparameter_path + "best_pg_model.pth")
-pg_actions, pg_rewards, pg_rsmse = pg_agent.test(deep_hedging_env)
+# deep_hedging_env.discretized = False
+# validation_deep_hedging_env.discretized = False
+# pg_agent = PG.PG(config=config, state_size=state_size, action_size=1, device=device)
+# start_time = datetime.datetime.now()
+# pg_train_losses = pg_agent.train(deep_hedging_env, validation_deep_hedging_env, episodes=episodes, BS_rsmse=rsmse_DH_leland, lr_schedule=lr_schedule, render=True)
+# time_taken = str(datetime.datetime.now() - start_time)
+# pg_agent.save(hyperparameter_path + "best_pg_model.pth")
+# pg_actions, pg_rewards, pg_rsmse = pg_agent.test(deep_hedging_env)
 
-print("TIME TAKEN: ", time_taken)
-with open(hyperparameter_path + "pg_time_taken_best_model.txt", 'w') as file:
-    file.write(time_taken)
+# print("TIME TAKEN: ", time_taken)
+# with open(hyperparameter_path + "pg_time_taken_best_model.txt", 'w') as file:
+#     file.write(time_taken)
 
-with open(hyperparameter_path + "pg_train_losses_best_model.pickle", 'wb') as file:
-    pickle.dump(pg_train_losses, file)
+# with open(hyperparameter_path + "pg_train_losses_best_model.pickle", 'wb') as file:
+#     pickle.dump(pg_train_losses, file)
 
-with open(hyperparameter_path + "pg_train_losses_best_model.pickle", "rb") as file:
-    pg_train_losses = pickle.load(file)
+# with open(hyperparameter_path + "pg_train_losses_best_model.pickle", "rb") as file:
+#     pg_train_losses = pickle.load(file)
 
-pg_train_losses_fig = plt.figure(figsize=(12, 6))
-plt.plot(pg_train_losses, label="RSMSE")
-plt.xlabel("Episodes (1000s)")
-plt.ylabel("RSMSE")
-plt.legend()
-plt.grid(which="both")
-plt.title("Testing RSMSE for PG")
-plt.savefig(hyperparameter_path + "pg_train_losses_best_model.png")
-plt.close()
+# pg_train_losses_fig = plt.figure(figsize=(12, 6))
+# plt.plot(pg_train_losses, label="RSMSE")
+# plt.xlabel("Episodes (1000s)")
+# plt.ylabel("RSMSE")
+# plt.legend()
+# plt.grid(which="both")
+# plt.title("Testing RSMSE for PG")
+# plt.savefig(hyperparameter_path + "pg_train_losses_best_model.png")
+# plt.close()
 
-print("POLICY GRADIENT RSMSE: " + str(pg_rsmse))
+# print("POLICY GRADIENT RSMSE: " + str(pg_rsmse))
 
-pg_actions = pg_actions.cpu().detach().numpy()
-pg_rewards = pg_rewards.cpu().detach().numpy()
+# pg_actions = pg_actions.cpu().detach().numpy()
+# pg_rewards = pg_rewards.cpu().detach().numpy()
 
-print(" ----------------- ")
-print(" Policy Gradient Results")
-print(" ----------------- ")
-Utils_general.print_stats(pg_rewards, pg_actions, "RSMSE", "Policy Gradient", V_0)
+# print(" ----------------- ")
+# print(" Policy Gradient Results")
+# print(" ----------------- ")
+# Utils_general.print_stats(pg_rewards, pg_actions, "RSMSE", "Policy Gradient", V_0)
 
 """Train and test DQN"""
 
 config={
-    "lr": 0.0001,
+    "lr": 0.00001,
     "batch_size": 128,
-    "num_layers": 3,
-    "hidden_size": 256,
+    "num_layers": 4,
+    "hidden_size": 128,
 }
 
 hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/dqn_hyperparameters/" + dqn_model_type + "/" + time_frame + "/" + str(trans_costs) + "/"
