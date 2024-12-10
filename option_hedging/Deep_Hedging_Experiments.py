@@ -805,8 +805,8 @@ def plot_actions(path, BS_actions, model_actions, model_labels):
 """Get actions from all models"""
 discretized_actions = np.arange(start=-0.5, stop=2.0, step=0.05)
 # pg_actions = train_test_pg()
-dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=False, double=False).astype(int)]
-# double_dqn_actions = discretized_actions[train_test_dqn(dueling=False, double=True).astype(int)]
+# dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=False, double=False).astype(int)]
+double_dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=False, double=True).astype(int)]
 # dueling_dqn_actions = discretized_actions[train_test_dqn(dueling=True, double=False).astype(int)]
 # dueling_double_dqn_actions = discretized_actions[train_test_dqn(dueling=True, double=True).astype(int)]
 # ppo_actions = train_test_ppo()
