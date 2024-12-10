@@ -25,7 +25,7 @@ import shutil
 import subprocess
 
 start_total_time = datetime.datetime.now()
-episodes = 500000
+episodes = 1000000
 trans_costs = 0.00              #proportional transaction costs 0.0 or 0.01
 twin_delayed=False
 double=False
@@ -163,10 +163,10 @@ def generate_garch_dataset(dataset_type="train_set", size=train_size):
         torch.save(dataset, global_path_prefix  + "option_hedging/" + str(dataset_type))
 
 """Training the garch model and generating the datasets"""
-train_garch()
-generate_garch_dataset(dataset_type="train_set", size=train_size)
-generate_garch_dataset(dataset_type="val_set", size=val_size)
-generate_garch_dataset(dataset_type="test_set", size=test_size)
+# train_garch()
+# generate_garch_dataset(dataset_type="train_set", size=train_size)
+# generate_garch_dataset(dataset_type="val_set", size=val_size)
+# generate_garch_dataset(dataset_type="test_set", size=test_size)
 
 # Select the device
 if cpu:
@@ -215,6 +215,7 @@ for i in range(10):
     if i == 0:
         bs_actions = deltas_DH
         rsmse_DH_leland = rsmse_leland
+        test_set_DH = test_set_BS
 
 print("bs_rsmse_list: ", bs_rsmse_list)
 print("AVERAGE RSMSE B-S DH: ", np.mean(bs_rsmse_list).item())
@@ -808,8 +809,8 @@ discretized_actions = np.arange(start=-0.5, stop=2.0, step=0.05)
 # dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=False, double=False).astype(int)]
 double_dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=False, double=True).astype(int)]
 # dueling_dqn_actions = discretized_actions[train_test_dqn(dueling=True, double=False).astype(int)]
-# dueling_double_dqn_actions = discretized_actions[train_test_dqn(dueling=True, double=True).astype(int)]
-# ppo_actions = train_test_ppo()
+# dueling_double_dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=True, double=True).astype(int)]
+# ppo_actions = train_test_ppo(train=True)
 # ddpg_actions = train_test_ddpg()
 
 # model_actions = np.stack([pg_actions, dqn_actions, double_dqn_actions, dueling_dqn_actions, dueling_double_dqn_actions, ppo_actions, ddpg_actions])
@@ -823,7 +824,7 @@ double_dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=Fals
 # model_actions = np.stack([model_actions[0,:,:], model_actions[4,:,:], model_actions[5,:,:], model_actions[6,:,:]])
 # model_labels = ["PG", "Dueling Double DQL", "PPO", "DDPG"]
 
-# plot_actions(test_set_BS[:,0], bs_actions[:,0], model_actions[:,:,0], model_labels)
+# plot_actions(test_set_DH[:,0], bs_actions[:,0], model_actions[:,:,0], model_labels)
 
 
 # tune_dqn()
