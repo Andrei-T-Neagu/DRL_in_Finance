@@ -25,7 +25,7 @@ import shutil
 import subprocess
 
 start_total_time = datetime.datetime.now()
-episodes = 1000000
+episodes = 500000
 trans_costs = 0.00              #proportional transaction costs 0.0 or 0.01
 twin_delayed=False
 double=False
@@ -178,7 +178,7 @@ else:
 train_set = torch.load(global_path_prefix + "option_hedging/train_set", weights_only=True)
 val_set = torch.load(global_path_prefix + "option_hedging/val_set", weights_only=True)
 test_set = torch.load(global_path_prefix + "option_hedging/test_set", weights_only=True)
-print("test_set.shape: ", test_set.shape)
+
 # For reproducibility
 torch.manual_seed(0)
 random.seed(0)
@@ -200,7 +200,7 @@ for i in range(10):
     smse_DH = np.mean(semi_square_hedging_err_DH)
     rsmse_DH = np.sqrt(np.mean(semi_square_hedging_err_DH))
     print(rsmse_DH)
-    bs_rsmse_list.append(rsmse_DH)
+    bs_rsmse_list.append(rsmse_DH.item())
 
     print(" ----------------- ")
     print("Leland Delta Hedging Results")
@@ -211,7 +211,7 @@ for i in range(10):
     semi_square_hedging_err_DH_leland = np.square(np.where(hedging_err_DH_leland > 0, hedging_err_DH_leland, 0))
     smse_DH_leland = np.mean(semi_square_hedging_err_DH_leland)
     rsmse_leland = np.sqrt(np.mean(semi_square_hedging_err_DH_leland))
-    leland_rsmse_list.append(rsmse_leland)
+    leland_rsmse_list.append(rsmse_leland.item())
     if i == 0:
         bs_actions = deltas_DH
         rsmse_DH_leland = rsmse_leland
@@ -267,10 +267,10 @@ def train_test_pg(train=False):
             _, _, pg_rsmse = pg_agent.test(deep_hedging_env)
         pg_rsmse_list.append(pg_rsmse)
     print("pg_rsmse_list: ", pg_rsmse_list)
-
+    print("TEST SET PERFORMANCE: " + str(np.mean(pg_rsmse_list).item()) + " +- " + str(np.std(pg_rsmse_list).item()))
     if train:
         pg_performance = "TEST SET PERFORMANCE: " + str(np.mean(pg_rsmse_list).item()) + " +- " + str(np.std(pg_rsmse_list).item()) + " | TIME TAKEN: " + time_taken
-        print(pg_performance)
+        print("TIME TAKEN: " + time_taken)
         
         with open(hyperparameter_path + "pg_performance.txt", 'w') as file:
             file.write(pg_performance)
@@ -323,6 +323,7 @@ def train_test_dqn(train=False, dueling=False, double=False):
     deep_hedging_env.discretized = True
     validation_deep_hedging_env.discretized = True
     action_size = deep_hedging_env.discretized_actions.shape[0]
+
     dqn_agent = DQN.DoubleDQN(config=config, state_size=state_size, action_size=action_size, double=double, dueling=dueling, device=device)
     if train:
         start_time = datetime.datetime.now()
@@ -340,10 +341,10 @@ def train_test_dqn(train=False, dueling=False, double=False):
             _, _, dqn_rsmse = dqn_agent.test(deep_hedging_env)
         dqn_rsmse_list.append(dqn_rsmse)
     print("dqn_rsmse_list: ", dqn_rsmse_list)
-    
+    print("TEST SET PERFORMANCE: " + str(np.mean(dqn_rsmse_list).item()) + " +- " + str(np.std(dqn_rsmse_list).item()))
     if train:
         dqn_performance = "TEST SET PERFORMANCE: " + str(np.mean(dqn_rsmse_list).item()) + " +- " + str(np.std(dqn_rsmse_list).item()) + " | TIME TAKEN: " + time_taken
-        print(dqn_performance)
+        print("TIME TAKEN: " + time_taken)
         
         with open(hyperparameter_path + "dqn_performance.txt", 'w') as file:
             file.write(dqn_performance)
@@ -406,10 +407,10 @@ def train_test_ppo(train=False):
             _, _, ppo_rsmse = ppo_agent.test(deep_hedging_env)
         ppo_rsmse_list.append(ppo_rsmse)
     print("ppo_rsmse_list: ", ppo_rsmse_list)
-    
+    print("TEST SET PERFORMANCE: " + str(np.mean(ppo_rsmse_list).item()) + " +- " + str(np.std(ppo_rsmse_list).item()))
     if train:
         ppo_performance = "TEST SET PERFORMANCE: " + str(np.mean(ppo_rsmse_list).item()) + " +- " + str(np.std(ppo_rsmse_list).item()) + " | TIME TAKEN: " + time_taken
-        print(ppo_performance)
+        print("TIME TAKEN: " + time_taken)
         
         with open(hyperparameter_path + "ppo_performance.txt", 'w') as file:
             file.write(ppo_performance)
@@ -445,7 +446,7 @@ def train_test_ppo(train=False):
 """Train and test DDPG"""
 def train_test_ddpg(train=False, twin_delayed=twin_delayed):
     if twin_delayed:
-        config={"lr": 0.00001, "batch_size": 256, "num_layers": 4, "hidden_size": 256}
+        config={"lr": 0.00001, "batch_size": 64, "num_layers": 4, "hidden_size": 256}
         ddpg_model_type = "twin_delayed"
     else:
         config={"lr": 0.00001, "batch_size": 64, "num_layers": 4, "hidden_size": 256}
@@ -472,11 +473,16 @@ def train_test_ddpg(train=False, twin_delayed=twin_delayed):
             _, _, ddpg_rsmse = ddpg_agent.test(deep_hedging_env)
         ddpg_rsmse_list.append(ddpg_rsmse)
     print("ddpg_rsmse_list: ", ddpg_rsmse_list)
+    print("TEST SET PERFORMANCE: " + str(np.mean(ddpg_rsmse_list).item()) + " +- " + str(np.std(ddpg_rsmse_list).item()))
+    
+    with open(hyperparameter_path + "ddpg_train_losses_best_model.pickle", "rb") as file:
+        ddpg_train_losses = pickle.load(file)
+
+    print("min(ddpg_train_losses)", min(ddpg_train_losses))
 
     if train:
         ddpg_performance = "TEST SET PERFORMANCE: " + str(np.mean(ddpg_rsmse_list).item()) + " +- " + str(np.std(ddpg_rsmse_list).item()) + " | TIME TAKEN: " + time_taken
-        print(ddpg_performance)
-
+        print("TIME TAKEN: " + time_taken)
         with open(hyperparameter_path + "ddpg_performance.txt", 'w') as file:
             file.write(ddpg_performance)
         
@@ -805,13 +811,14 @@ def plot_actions(path, BS_actions, model_actions, model_labels):
 
 """Get actions from all models"""
 discretized_actions = np.arange(start=-0.5, stop=2.0, step=0.05)
+
 # pg_actions = train_test_pg()
-# dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=False, double=False).astype(int)]
-double_dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=False, double=True).astype(int)]
+dqn_actions = discretized_actions[train_test_dqn(dueling=False, double=False).astype(int)]
+# double_dqn_actions = discretized_actions[train_test_dqn(dueling=False, double=True).astype(int)]
 # dueling_dqn_actions = discretized_actions[train_test_dqn(dueling=True, double=False).astype(int)]
-# dueling_double_dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=True, double=True).astype(int)]
-# ppo_actions = train_test_ppo(train=True)
-# ddpg_actions = train_test_ddpg()
+# dueling_double_dqn_actions = discretized_actions[train_test_dqn(dueling=True, double=True).astype(int)]
+# ppo_actions = train_test_ppo()
+ddpg_actions = train_test_ddpg(train=True, twin_delayed=True)
 
 # model_actions = np.stack([pg_actions, dqn_actions, double_dqn_actions, dueling_dqn_actions, dueling_double_dqn_actions, ppo_actions, ddpg_actions])
 
