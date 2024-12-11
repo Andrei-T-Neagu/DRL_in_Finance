@@ -25,7 +25,7 @@ import shutil
 import subprocess
 
 start_total_time = datetime.datetime.now()
-episodes = 500000
+episodes = 1000
 trans_costs = 0.00              #proportional transaction costs 0.0 or 0.01
 twin_delayed=False
 double=False
@@ -36,7 +36,7 @@ cpu = True
 cpus = 1
 num_gpus = 1
 gpus = 0.05
-# subprocess.Popen("nvidia-smi")
+subprocess.Popen("nvidia-smi")
 
 global_path_prefix = os.getcwd()+"/"
 
@@ -474,11 +474,6 @@ def train_test_ddpg(train=False, twin_delayed=twin_delayed):
         ddpg_rsmse_list.append(ddpg_rsmse)
     print("ddpg_rsmse_list: ", ddpg_rsmse_list)
     print("TEST SET PERFORMANCE: " + str(np.mean(ddpg_rsmse_list).item()) + " +- " + str(np.std(ddpg_rsmse_list).item()))
-    
-    with open(hyperparameter_path + "ddpg_train_losses_best_model.pickle", "rb") as file:
-        ddpg_train_losses = pickle.load(file)
-
-    print("min(ddpg_train_losses)", min(ddpg_train_losses))
 
     if train:
         ddpg_performance = "TEST SET PERFORMANCE: " + str(np.mean(ddpg_rsmse_list).item()) + " +- " + str(np.std(ddpg_rsmse_list).item()) + " | TIME TAKEN: " + time_taken
@@ -834,7 +829,7 @@ ddpg_actions = train_test_ddpg(train=True, twin_delayed=True)
 # plot_actions(test_set_DH[:,0], bs_actions[:,0], model_actions[:,:,0], model_labels)
 
 
-tune_ddpg()
+# tune_ddpg()
 
 
 
