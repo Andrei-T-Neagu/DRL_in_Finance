@@ -32,11 +32,11 @@ double=False
 dueling=False
 T = 252/252
 
-cpu = False
+cpu = True
 cpus = 1
 num_gpus = 1
 gpus = 0.05
-subprocess.Popen("nvidia-smi")
+# subprocess.Popen("nvidia-smi")
 
 global_path_prefix = os.getcwd()+"/"
 
@@ -827,7 +827,7 @@ double_dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=Fals
 # plot_actions(test_set_DH[:,0], bs_actions[:,0], model_actions[:,:,0], model_labels)
 
 
-# tune_dqn()
+tune_ddpg()
 
 
 
