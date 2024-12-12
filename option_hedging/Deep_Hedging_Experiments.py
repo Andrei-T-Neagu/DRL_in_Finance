@@ -25,14 +25,14 @@ import shutil
 import subprocess
 
 start_total_time = datetime.datetime.now()
-episodes = 1000
+episodes = 500000
 trans_costs = 0.00              #proportional transaction costs 0.0 or 0.01
 twin_delayed=False
 double=False
 dueling=False
 T = 252/252
 
-cpu = True
+cpu = False
 cpus = 1
 num_gpus = 1
 gpus = 0.05
@@ -808,7 +808,7 @@ def plot_actions(path, BS_actions, model_actions, model_labels):
 discretized_actions = np.arange(start=-0.5, stop=2.0, step=0.05)
 
 # pg_actions = train_test_pg()
-dqn_actions = discretized_actions[train_test_dqn(dueling=False, double=False).astype(int)]
+dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=False, double=False).astype(int)]
 # double_dqn_actions = discretized_actions[train_test_dqn(dueling=False, double=True).astype(int)]
 # dueling_dqn_actions = discretized_actions[train_test_dqn(dueling=True, double=False).astype(int)]
 # dueling_double_dqn_actions = discretized_actions[train_test_dqn(dueling=True, double=True).astype(int)]
