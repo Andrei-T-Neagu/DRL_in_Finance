@@ -248,6 +248,10 @@ def train_test_pg(train=False):
 
     hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/pg_hyperparameters/" + time_frame + "/" + str(trans_costs) + "/"
 
+    torch.manual_seed(0)
+    random.seed(0)
+    np.random.seed(0)
+
     deep_hedging_env.discretized = False
     validation_deep_hedging_env.discretized = False
     pg_agent = PG.PG(config=config, state_size=state_size, action_size=1, device=device)
@@ -320,6 +324,10 @@ def train_test_dqn(train=False, dueling=False, double=False):
 
     hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/dqn_hyperparameters/" + dqn_model_type + "/" + time_frame + "/" + str(trans_costs) + "/"
 
+    torch.manual_seed(0)
+    random.seed(0)
+    np.random.seed(0)
+
     deep_hedging_env.discretized = True
     validation_deep_hedging_env.discretized = True
     action_size = deep_hedging_env.discretized_actions.shape[0]
@@ -388,6 +396,10 @@ def train_test_ppo(train=False):
 
     hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/ppo_hyperparameters/" + time_frame + "/" + str(trans_costs) + "/"
 
+    torch.manual_seed(0)
+    random.seed(0)
+    np.random.seed(0)
+
     deep_hedging_env.discretized = False
     validation_deep_hedging_env.discretized = False
     ppo_agent = PPO.PPO(config=config, state_size=state_size, action_size=1, device=device)
@@ -453,6 +465,10 @@ def train_test_ddpg(train=False, twin_delayed=twin_delayed):
         ddpg_model_type = "vanilla"
     
     hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/ddpg_hyperparameters/" + ddpg_model_type + "/" + time_frame + "/" + str(trans_costs) + "/"
+
+    torch.manual_seed(0)
+    random.seed(0)
+    np.random.seed(0)
 
     deep_hedging_env.discretized = False
     validation_deep_hedging_env.discretized = False
@@ -807,13 +823,14 @@ def plot_actions(path, BS_actions, model_actions, model_labels):
 """Get actions from all models"""
 discretized_actions = np.arange(start=-0.5, stop=2.0, step=0.05)
 
-# pg_actions = train_test_pg()
+pg_actions = train_test_pg(train=True)
 dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=False, double=False).astype(int)]
-# double_dqn_actions = discretized_actions[train_test_dqn(dueling=False, double=True).astype(int)]
-# dueling_dqn_actions = discretized_actions[train_test_dqn(dueling=True, double=False).astype(int)]
-# dueling_double_dqn_actions = discretized_actions[train_test_dqn(dueling=True, double=True).astype(int)]
-# ppo_actions = train_test_ppo()
-ddpg_actions = train_test_ddpg(train=True, twin_delayed=True)
+# double_dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=False, double=True).astype(int)]
+# dueling_dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=True, double=False).astype(int)]
+# dueling_double_dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=True, double=True).astype(int)]
+# ppo_actions = train_test_ppo(train=True)
+# ddpg_actions = train_test_ddpg(train=True)
+# ddpg_actions = train_test_ddpg(train=True, twin_delayed=True)
 
 # model_actions = np.stack([pg_actions, dqn_actions, double_dqn_actions, dueling_dqn_actions, dueling_double_dqn_actions, ppo_actions, ddpg_actions])
 
