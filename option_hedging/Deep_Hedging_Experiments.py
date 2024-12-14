@@ -823,27 +823,27 @@ def plot_actions(path, BS_actions, model_actions, model_labels):
 """Get actions from all models"""
 discretized_actions = np.arange(start=-0.5, stop=2.0, step=0.05)
 
-# pg_actions = train_test_pg(train=True)
-# dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=False, double=False).astype(int)]
-# double_dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=False, double=True).astype(int)]
-dueling_dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=True, double=False).astype(int)]
-dueling_double_dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=True, double=True).astype(int)]
-ppo_actions = train_test_ppo(train=True)
-# ddpg_actions = train_test_ddpg(train=True)
-ddpg_actions = train_test_ddpg(train=True, twin_delayed=True)
+pg_actions = train_test_pg()
+dqn_actions = discretized_actions[train_test_dqn(dueling=False, double=False).astype(int)]
+double_dqn_actions = discretized_actions[train_test_dqn(dueling=False, double=True).astype(int)]
+dueling_dqn_actions = discretized_actions[train_test_dqn(dueling=True, double=False).astype(int)]
+dueling_double_dqn_actions = discretized_actions[train_test_dqn(dueling=True, double=True).astype(int)]
+ppo_actions = train_test_ppo()
+ddpg_actions = train_test_ddpg()
+td_ddpg_actions = train_test_ddpg(twin_delayed=True)
 
-# model_actions = np.stack([pg_actions, dqn_actions, double_dqn_actions, dueling_dqn_actions, dueling_double_dqn_actions, ppo_actions, ddpg_actions])
+model_actions = np.stack([pg_actions, dqn_actions, double_dqn_actions, dueling_dqn_actions, dueling_double_dqn_actions, ppo_actions, ddpg_actions, td_ddpg_actions])
 
-# with open(global_path_prefix + "option_hedging/model_actions.pickle", 'wb') as file:
-#     pickle.dump(model_actions, file)
+with open(global_path_prefix + "option_hedging/model_actions.pickle", 'wb') as file:
+    pickle.dump(model_actions, file)
 
-# with open(global_path_prefix + "option_hedging/model_actions.pickle", "rb") as file:
-#     model_actions = pickle.load(file)
+with open(global_path_prefix + "option_hedging/model_actions.pickle", "rb") as file:
+    model_actions = pickle.load(file)
 
-# model_actions = np.stack([model_actions[0,:,:], model_actions[4,:,:], model_actions[5,:,:], model_actions[6,:,:]])
-# model_labels = ["PG", "Dueling Double DQL", "PPO", "DDPG"]
+model_actions = np.stack([model_actions[0,:,:], model_actions[4,:,:], model_actions[5,:,:], model_actions[7,:,:]])
+model_labels = ["PG", "Dueling Double DQL", "PPO", "TD3"]
 
-# plot_actions(test_set_DH[:,0], bs_actions[:,0], model_actions[:,:,0], model_labels)
+plot_actions(test_set_DH[:,0], bs_actions[:,0], model_actions[:,:,0], model_labels)
 
 
 # tune_ddpg()
