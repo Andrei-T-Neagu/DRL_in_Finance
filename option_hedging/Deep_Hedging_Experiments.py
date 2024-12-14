@@ -823,14 +823,14 @@ def plot_actions(path, BS_actions, model_actions, model_labels):
 """Get actions from all models"""
 discretized_actions = np.arange(start=-0.5, stop=2.0, step=0.05)
 
-pg_actions = train_test_pg(train=True)
-dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=False, double=False).astype(int)]
+# pg_actions = train_test_pg(train=True)
+# dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=False, double=False).astype(int)]
 # double_dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=False, double=True).astype(int)]
-# dueling_dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=True, double=False).astype(int)]
-# dueling_double_dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=True, double=True).astype(int)]
-# ppo_actions = train_test_ppo(train=True)
+dueling_dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=True, double=False).astype(int)]
+dueling_double_dqn_actions = discretized_actions[train_test_dqn(train=True, dueling=True, double=True).astype(int)]
+ppo_actions = train_test_ppo(train=True)
 # ddpg_actions = train_test_ddpg(train=True)
-# ddpg_actions = train_test_ddpg(train=True, twin_delayed=True)
+ddpg_actions = train_test_ddpg(train=True, twin_delayed=True)
 
 # model_actions = np.stack([pg_actions, dqn_actions, double_dqn_actions, dueling_dqn_actions, dueling_double_dqn_actions, ppo_actions, ddpg_actions])
 
