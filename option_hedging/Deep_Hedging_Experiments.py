@@ -164,6 +164,7 @@ def generate_garch_dataset(dataset_type="train_set", size=train_size):
 
 """Training the garch model and generating the datasets"""
 # train_garch()
+# garch_model.print_params()
 # generate_garch_dataset(dataset_type="train_set", size=train_size)
 # generate_garch_dataset(dataset_type="val_set", size=val_size)
 # generate_garch_dataset(dataset_type="test_set", size=test_size)
@@ -420,6 +421,7 @@ def train_test_ppo(train=False):
         ppo_rsmse_list.append(ppo_rsmse)
     print("ppo_rsmse_list: ", ppo_rsmse_list)
     print("TEST SET PERFORMANCE: " + str(np.mean(ppo_rsmse_list).item()) + " +- " + str(np.std(ppo_rsmse_list).item()))
+    
     if train:
         ppo_performance = "TEST SET PERFORMANCE: " + str(np.mean(ppo_rsmse_list).item()) + " +- " + str(np.std(ppo_rsmse_list).item()) + " | TIME TAKEN: " + time_taken
         print("TIME TAKEN: " + time_taken)
@@ -801,7 +803,7 @@ def plot_actions(path, BS_actions, model_actions, model_labels):
     fig, ax1 = plt.subplots(figsize=(8.6, 4.3))
     plt.grid("both")
     ax1.set_xlabel("Time Step $(t)$", fontsize=15)
-    ax1.set_ylabel("Hedging Strategy $(X_{t+1})$", fontsize=15)
+    ax1.set_ylabel("Hedging Position $(X_{t+1})$", fontsize=15)
     ax1.plot(BS_actions, label="B-S DH (Baseline)")
     for i, model_label in enumerate(model_labels):
         ax1.plot(model_actions[i], label=model_label)
@@ -820,31 +822,70 @@ def plot_actions(path, BS_actions, model_actions, model_labels):
     plt.savefig(global_path_prefix +  "option_hedging/hedging_ratios.svg")
     plt.close()
 
+def plot_training_losses(train_losses, model_name, hyperparameter_path):
+    train_losses_fig = plt.figure(figsize=(12, 6))
+    plt.plot(train_losses, label="RSMSE")
+    plt.xlabel("Episodes (1000s)")
+    # plt.xscale("log")
+    plt.ylabel("RSMSE")
+    plt.legend()
+    plt.grid(which="both")
+    plt.title("Validation RSMSE for " + model_name)
+    plt.savefig(hyperparameter_path + model_name + "_train_losses.png")
+    plt.close()
+
+def plot_ppo_losses():
+    first_path = global_path_prefix + "option_hedging/hyperparameters/ppo_hyperparameters/year/0.0/train_losses/ppo_train_losses_lr=0.0001|batch_size=256|num_layers=2|hidden_size=128.pickle"
+    second_path = global_path_prefix + "option_hedging/hyperparameters/ppo_hyperparameters/year/0.0/train_losses/ppo_train_losses_lr=0.0001|batch_size=256|num_layers=4|hidden_size=64.pickle"
+    third_path = global_path_prefix + "option_hedging/hyperparameters/ppo_hyperparameters/year/0.0/train_losses/ppo_train_losses_lr=1e-05|batch_size=256|num_layers=4|hidden_size=256.pickle"
+    fourth_path = global_path_prefix + "option_hedging/hyperparameters/ppo_hyperparameters/year/0.0/train_losses/ppo_train_losses_lr=1e-05|batch_size=256|num_layers=2|hidden_size=256.pickle"
+    with open(first_path, "rb") as file:
+        first = pickle.load(file)
+    with open(second_path, "rb") as file:
+        second = pickle.load(file)
+    with open(third_path, "rb") as file:
+        third = pickle.load(file)
+    with open(fourth_path, "rb") as file:
+        fourth = pickle.load(file)
+    train_losses_fig = plt.figure(figsize=(12, 6))
+    # plt.plot(first, label="first hyperparameter combination")
+    # plt.plot(second, label="second hyperparameter combination")
+    plt.plot(third, label="third hyperparameter combination")
+    # plt.plot(fourth, label="fourth hyperparameter combination")
+    plt.xlabel("Updates (1000s)")
+    # plt.yscale("log")
+    plt.ylabel("log RSQP")
+    plt.legend()
+    plt.grid(which="both")
+    plt.title("Validation RSQP for PPO over time")
+    plt.savefig(global_path_prefix + "option_hedging/ppo_validation_losses.png")
+    plt.close()
+
 """Get actions from all models"""
 discretized_actions = np.arange(start=-0.5, stop=2.0, step=0.05)
 
-pg_actions = train_test_pg()
-dqn_actions = discretized_actions[train_test_dqn(dueling=False, double=False).astype(int)]
-double_dqn_actions = discretized_actions[train_test_dqn(dueling=False, double=True).astype(int)]
-dueling_dqn_actions = discretized_actions[train_test_dqn(dueling=True, double=False).astype(int)]
-dueling_double_dqn_actions = discretized_actions[train_test_dqn(dueling=True, double=True).astype(int)]
-ppo_actions = train_test_ppo()
-ddpg_actions = train_test_ddpg()
-td_ddpg_actions = train_test_ddpg(twin_delayed=True)
+# pg_actions = train_test_pg()
+# dqn_actions = discretized_actions[train_test_dqn(dueling=False, double=False).astype(int)]
+# double_dqn_actions = discretized_actions[train_test_dqn(dueling=False, double=True).astype(int)]
+# dueling_dqn_actions = discretized_actions[train_test_dqn(dueling=True, double=False).astype(int)]
+# dueling_double_dqn_actions = discretized_actions[train_test_dqn(dueling=True, double=True).astype(int)]
+# ppo_actions = train_test_ppo()
+# ddpg_actions = train_test_ddpg()
+# td_ddpg_actions = train_test_ddpg(twin_delayed=True)
 
-model_actions = np.stack([pg_actions, dqn_actions, double_dqn_actions, dueling_dqn_actions, dueling_double_dqn_actions, ppo_actions, ddpg_actions, td_ddpg_actions])
+# model_actions = np.stack([pg_actions, dqn_actions, double_dqn_actions, dueling_dqn_actions, dueling_double_dqn_actions, ppo_actions, ddpg_actions, td_ddpg_actions])
 
-with open(global_path_prefix + "option_hedging/model_actions.pickle", 'wb') as file:
-    pickle.dump(model_actions, file)
+# with open(global_path_prefix + "option_hedging/model_actions.pickle", 'wb') as file:
+#     pickle.dump(model_actions, file)
 
-with open(global_path_prefix + "option_hedging/model_actions.pickle", "rb") as file:
-    model_actions = pickle.load(file)
+# with open(global_path_prefix + "option_hedging/model_actions.pickle", "rb") as file:
+#     model_actions = pickle.load(file)
 
-model_actions = np.stack([model_actions[0,:,:], model_actions[4,:,:], model_actions[5,:,:], model_actions[7,:,:]])
-model_labels = ["PG", "Dueling Double DQL", "PPO", "TD3"]
+# model_actions = np.stack([model_actions[0,:,:], model_actions[3,:,:], model_actions[5,:,:], model_actions[7,:,:]])
+# model_labels = ["PG", "Dueling DQL", "PPO", "TD3"]
 
-plot_actions(test_set_DH[:,0], bs_actions[:,0], model_actions[:,:,0], model_labels)
-
+# plot_actions(test_set_DH[:,0], bs_actions[:,0], model_actions[:,:,0], model_labels)
+plot_ppo_losses()
 
 # tune_ddpg()
 

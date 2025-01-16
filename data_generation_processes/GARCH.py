@@ -153,6 +153,6 @@ class GARCH():
     def print_params(self):
         """Function used to print the parameters of the model"""
         if self.type == "gjr" or self.type == "e":
-            print("alpha_0: " + str(self.params[0]) + ", alpha: " + str(self.params[1]) + ", beta: " + str(self.params[2]) + ", gamma: " + str(self.params[3]))
+            print("mu: " + str(self.mu) + ", alpha_0: " + str(self.params[0]) + ", alpha: " + str(self.params[1]) + ", beta: " + str(self.params[2]) + ", gamma: " + str(self.params[3]))
         else:
-            print("alpha_0: " + str(self.params[0]) + ", alpha: " + str(self.params[1]) + ", beta: " + str(self.params[2]))
+            print("mu: " + str(self.mu) + ", alpha_0: " + str(self.params[0]) + ", alpha: " + str(self.params[1]) + ", beta: " + str(self.params[2]))

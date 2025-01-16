@@ -133,12 +133,12 @@ class DeepHedgingEnvironment():
         if self.t == 0:
             diff_delta_t = self.delta_t_next                                            # torch.Tensor of size [self.batch_size]. Difference in hedging position from last period
             cashflow = self.liquid_func(self.S_t, -diff_delta_t)    # torch.Tensor of size [self.batch_size]. Monetary gain or loss from last period.
-            self.M_t = self.V_t + cashflow                                              # torch.Tensor of size [self.batch_size]. Time-t amount in the bank account (cash reserve)
+            self.M_t = self.int_rate_bank(self.V_t + cashflow)                                              # torch.Tensor of size [self.batch_size]. Time-t amount in the bank account (cash reserve)
         else:
             # Compute amount in cash reserve
             diff_delta_t = self.delta_t_next - self.delta_t
             cashflow = self.liquid_func(self.S_t, -diff_delta_t)
-            self.M_t = self.int_rate_bank(self.M_t) + cashflow  # time-t amount in cash reserve
+            self.M_t = self.int_rate_bank(self.M_t + cashflow)  # time-t amount in cash reserve
         
         # Update stock price
         batch = self.dataset[self.path*self.batch_size:(self.path+1)*self.batch_size,:]     # torch.Tensor of size [self.batch_size, self.N] representing a batch of price paths
@@ -146,7 +146,7 @@ class DeepHedgingEnvironment():
 
         # Liquidation portfolio value
         L_t = self.liquid_func(self.S_t, self.delta_t_next)     # torch.Tensor of size [self.batch_size]. Revenue from liquidating
-        self.V_t = self.int_rate_bank(self.M_t) + L_t                               # torch.Tensor of size [self.batch_size]. Portfolio value.
+        self.V_t = self.M_t + L_t                               # torch.Tensor of size [self.batch_size]. Portfolio value.
         # Processing stock price
         if self.prepro_stock == "log":
             self.S_t = torch.log(self.S_t)
