@@ -21,7 +21,7 @@ class GARCH():
         h_t:        conditional variance of a_t at time t.
         z_t:        iid errors such that E[z_t] = 0 and E[z_t z_t] = 1.
     """
-    def __init__(self, dcc=False, market_data=None, data=None, stock=None, start="2000-01-01", end="2024-08-20", interval="1d", type = "vanilla"):
+    def __init__(self, dcc=False, market_data=None, data=None, stock=None, start="2000-01-01", end="2024-08-20", interval="1d", type = "vanilla", multiply = False):
         """
             Args:   
             dcc:        True if used in the DCC_GARCH classes
@@ -32,15 +32,17 @@ class GARCH():
             interval:   Valid intervals: [1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo]
             type:       "vanilla" or "gjr"
         """
+        self.multiply = multiply
         if dcc:
             self.data = data
-        elif market_data is not None:
-            log_returns = np.log(market_data['Close'] / market_data['Close'].shift(1)).dropna()
-            self.data = log_returns.to_numpy().T*100
         else:
-            market_data = yf.download(stock, start=start, end=end, interval=interval, timeout=60)
+            if market_data is None:
+                market_data = yf.download(stock, start=start, end=end, interval=interval, timeout=60)
             log_returns = np.log(market_data['Close'] / market_data['Close'].shift(1)).dropna()
-            self.data = log_returns.to_numpy().T*100
+            if self.multiply:
+                self.data = log_returns.to_numpy().T*100
+            else:
+                self.data = log_returns.to_numpy().T
         self.type = type                                                                                # Garch type
         self.T = self.data.shape[0]                                                                     # Number of time steps in the data
         self.r_data = self.data                                                                         #(T,) log returns of the asset
@@ -145,7 +147,10 @@ class GARCH():
             #     print("timestep: " + str(t) + "/" + str(num_points))
             self.a_return = np.sqrt(self.h) * np.random.randn(batch_size,1)
             r_t = self.mu + self.a_return
-            prices[:, t+1:t+2] = prices[:, t:t+1]*np.exp(r_t/100)
+            if self.multiply:
+                prices[:, t+1:t+2] = prices[:, t:t+1]*np.exp(r_t/100)
+            else:
+                prices[:, t+1:t+2] = prices[:, t:t+1]*np.exp(r_t)
             self.h_t(params=self.params)
         
         return prices

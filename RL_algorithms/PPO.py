@@ -89,8 +89,8 @@ class PPO:
         episode_val_loss = []
 
         if lr_schedule:
-            self.value_scheduler = lr_scheduler.LinearLR(self.value_optimizer, start_factor=1.0, end_factor=0.005, total_iters=episodes)
-            self.policy_scheduler = lr_scheduler.LinearLR(self.policy_optimizer, start_factor=1.0, end_factor=0.005, total_iters=episodes)
+            self.value_scheduler = lr_scheduler.LinearLR(self.value_optimizer, start_factor=1.0, end_factor=0.0, total_iters=episodes)
+            self.policy_scheduler = lr_scheduler.LinearLR(self.policy_optimizer, start_factor=1.0, end_factor=0.0, total_iters=episodes)
         
         print("TRAINING PPO")
 
@@ -169,13 +169,13 @@ class PPO:
                 self.policy.train()
                 episode_val_loss.append(val_rsmse)
 
-            if render and episode % 10000 == 0:
+            if render and episode % 1000 == 0:
                 print(f"Episode {episode}/{episodes-1}, Policy Loss: {loss_policy.item()}, Value Loss: {loss_value.item()}, Validation Loss: {val_rsmse}")
 
             # Early stopping
-            # if len(episode_val_loss) > 10 and val_rsmse < BS_rsmse:
-            #     if min(episode_val_loss[:-10]) < min(episode_val_loss[-10:]):
-            #         break
+            if len(episode_val_loss) > 5 and val_rsmse < BS_rsmse:
+                if episode_val_loss[-6] < min(episode_val_loss[-5:]):
+                    break
 
         return episode_val_loss
 

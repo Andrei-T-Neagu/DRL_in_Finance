@@ -23,9 +23,11 @@ import pickle
 import tempfile
 import shutil
 import subprocess
+import copy
+from scipy.stats import ttest_ind
 
 start_total_time = datetime.datetime.now()
-episodes = 500000
+episodes = 200000
 trans_costs = 0.00              #proportional transaction costs 0.0 or 0.01
 twin_delayed=False
 double=False
@@ -39,6 +41,8 @@ gpus = 0.05
 subprocess.Popen("nvidia-smi")
 
 global_path_prefix = os.getcwd()+"/"
+
+print("GLOBAL PATH PREFIX: ", global_path_prefix)
 
 if T == 252/252:
     time_frame = "year"
@@ -77,6 +81,8 @@ train_size = 2**19
 val_size = 2**17
 test_size = 2**17
 
+num_test_sets = 10
+
 r_borrow = 0
 r_lend = 0
 
@@ -97,7 +103,7 @@ garch_type="gjr"
 light = False
 lr_schedule = True
 
-state_size = 3 if light else 4
+state_size = 2 if light else 3
 
 # Black-Scholes mu and sigma parameters estimated from real market data
 # market_data = yf.download(stock, start=start, end=end, interval=interval, timeout=60)
@@ -151,8 +157,8 @@ def train_garch():
 def generate_garch_dataset(dataset_type="train_set", size=train_size):
     print("Generating GARCH Data Set")
     if dataset_type == "test_set":
-        test_dataset = np.ones((10,size,nbs_point_traj))
-        for i in range(10):
+        test_dataset = np.ones((num_test_sets,size,nbs_point_traj))
+        for i in range(num_test_sets):
             dataset = garch_model.generate(S_0=S_0, batch_size=size, num_points=nbs_point_traj, load_params=True)
             test_dataset[i] = dataset
         test_dataset = torch.from_numpy(test_dataset).to(torch.float)
@@ -163,11 +169,11 @@ def generate_garch_dataset(dataset_type="train_set", size=train_size):
         torch.save(dataset, global_path_prefix  + "option_hedging/" + str(dataset_type))
 
 """Training the garch model and generating the datasets"""
-# train_garch()
-# garch_model.print_params()
-# generate_garch_dataset(dataset_type="train_set", size=train_size)
-# generate_garch_dataset(dataset_type="val_set", size=val_size)
-# generate_garch_dataset(dataset_type="test_set", size=test_size)
+train_garch()
+garch_model.print_params()
+generate_garch_dataset(dataset_type="train_set", size=train_size)
+generate_garch_dataset(dataset_type="val_set", size=val_size)
+generate_garch_dataset(dataset_type="test_set", size=test_size)
 
 # Select the device
 if cpu:
@@ -180,6 +186,10 @@ train_set = torch.load(global_path_prefix + "option_hedging/train_set", weights_
 val_set = torch.load(global_path_prefix + "option_hedging/val_set", weights_only=True)
 test_set = torch.load(global_path_prefix + "option_hedging/test_set", weights_only=True)
 
+# tune_test_set = copy.deepcopy(test_set[0])
+# print("test_set.shape: ", test_set.shape)
+# print("tune_test_set.shape: ", tune_test_set.shape)
+
 # For reproducibility
 torch.manual_seed(0)
 random.seed(0)
@@ -188,7 +198,7 @@ np.random.seed(0)
 """Print baseline models performance statistics"""
 bs_rsmse_list = []
 leland_rsmse_list = []
-for i in range(10):
+for i in range(num_test_sets):
     test_set_BS = test_set[i].detach().cpu().numpy().T
 
     print(" ----------------- ")
@@ -236,14 +246,14 @@ deep_hedging_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj,
                                                                  nbs_shares, light, train_set=train_set, test_set=test_set[0], trans_costs=trans_costs, discretized=False, device=device)
 
 validation_deep_hedging_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                                     nbs_shares, light, train_set=test_set[0], test_set=test_set[0], trans_costs=trans_costs, discretized=False, device=device)
+                                                                     nbs_shares, light, train_set=val_set, test_set=val_set, trans_costs=trans_costs, discretized=False, device=device)
 
 """Train and test PG"""
 def train_test_pg(train=False):
     config={
-        "lr": 0.00100,
+        "lr": 0.00001,
         "batch_size": 256,
-        "num_layers": 3,
+        "num_layers": 4,
         "hidden_size": 128,
     }
 
@@ -264,7 +274,7 @@ def train_test_pg(train=False):
     else:
         pg_agent.load(hyperparameter_path + "best_pg_model.pth")
     pg_rsmse_list = []
-    for i in range(10):
+    for i in range(num_test_sets):
         deep_hedging_env.test_set = test_set[i].to(device)
         if i == 0:
             pg_actions, pg_rewards, pg_rsmse = pg_agent.test(deep_hedging_env)
@@ -306,7 +316,7 @@ def train_test_pg(train=False):
     print(" ----------------- ")
     Utils_general.print_stats(pg_rewards, pg_actions, "RSMSE", "Policy Gradient", V_0)
 
-    return pg_actions
+    return pg_actions, pg_rsmse_list
 
 """Train and test DQN"""
 def train_test_dqn(train=False, dueling=False, double=False):
@@ -342,7 +352,7 @@ def train_test_dqn(train=False, dueling=False, double=False):
     else:
         dqn_agent.load(hyperparameter_path + "best_dqn_model.pth")
     dqn_rsmse_list = []
-    for i in range(10):
+    for i in range(num_test_sets):
         deep_hedging_env.test_set = test_set[i].to(device)
         if i == 0:
             dqn_actions, dqn_rewards, dqn_rsmse = dqn_agent.test(deep_hedging_env)
@@ -384,7 +394,7 @@ def train_test_dqn(train=False, dueling=False, double=False):
     print(" ----------------- ")
     Utils_general.print_stats(dqn_rewards, dqn_actions, "RSMSE", "DQN", V_0)
     
-    return dqn_actions
+    return dqn_actions, dqn_rsmse_list
 
 """Train and test PPO"""
 def train_test_ppo(train=False):
@@ -412,7 +422,7 @@ def train_test_ppo(train=False):
     else:
         ppo_agent.load(hyperparameter_path + "best_ppo_model.pth")
     ppo_rsmse_list = []
-    for i in range(10):
+    for i in range(num_test_sets):
         deep_hedging_env.test_set = test_set[i].to(device)
         if i == 0:
             ppo_actions, ppo_rewards, ppo_rsmse = ppo_agent.test(deep_hedging_env)
@@ -455,7 +465,7 @@ def train_test_ppo(train=False):
     print(" ----------------- ")
     Utils_general.print_stats(ppo_rewards, ppo_actions, "RSMSE", "Proximal Policy Optimization", V_0)
 
-    return ppo_actions
+    return ppo_actions, ppo_rsmse_list
 
 """Train and test DDPG"""
 def train_test_ddpg(train=False, twin_delayed=twin_delayed):
@@ -483,7 +493,7 @@ def train_test_ddpg(train=False, twin_delayed=twin_delayed):
     else:
         ddpg_agent.load(hyperparameter_path + "best_ddpg_model.pth")
     ddpg_rsmse_list = []
-    for i in range(10):
+    for i in range(num_test_sets):
         deep_hedging_env.test_set = test_set[i].to(device)
         if i == 0:
             ddpg_actions, ddpg_rewards, ddpg_rsmse = ddpg_agent.test(deep_hedging_env)
@@ -525,14 +535,14 @@ def train_test_ddpg(train=False, twin_delayed=twin_delayed):
     print(" ----------------- ")
     Utils_general.print_stats(ddpg_rewards, ddpg_actions, "RSMSE", "DDPG", V_0)
 
-    return ddpg_actions
+    return ddpg_actions, ddpg_rsmse_list
 
 """HYPERPARAMETER TUNING USING RAYTUNE"""
 
 env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
                                                     nbs_shares, light, train_set=train_set, test_set=test_set[0], trans_costs=trans_costs, discretized=False, device=device)
 val_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                        nbs_shares, light, train_set=val_set, test_set=test_set[0], trans_costs=trans_costs, discretized=False, device=device)
+                                                        nbs_shares, light, train_set=val_set, test_set=val_set, trans_costs=trans_costs, discretized=False, device=device)
 
 configs={
     "lr": tune.grid_search([0.001, 0.0001, 0.00001]),
@@ -556,7 +566,7 @@ def train_pg(config):
     hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/pg_hyperparameters/" + time_frame + "/" + str(trans_costs) + "/"
 
     env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                        nbs_shares, light, train_set=train_set, test_set=test_set[0], trans_costs=trans_costs, discretized=False, device=device)
+                                                        nbs_shares, light, train_set=train_set, test_set=val_set, trans_costs=trans_costs, discretized=False, device=device)
     val_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
                                                             nbs_shares, light, train_set=val_set, test_set=val_set, trans_costs=trans_costs, discretized=False, device=device)
     
@@ -585,7 +595,7 @@ def train_dqn(config):
     hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/dqn_hyperparameters/" + dqn_model_type + "/" + time_frame + "/" + str(trans_costs) + "/"
     
     env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                        nbs_shares, light, train_set=train_set, test_set=test_set[0], trans_costs=trans_costs, discretized=True, device=device)
+                                                        nbs_shares, light, train_set=train_set, test_set=val_set, trans_costs=trans_costs, discretized=True, device=device)
     val_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
                                                             nbs_shares, light, train_set=val_set, test_set=val_set, trans_costs=trans_costs, discretized=True, device=device)
 
@@ -616,7 +626,7 @@ def train_ppo(config):
     hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/ppo_hyperparameters/" + time_frame + "/" + str(trans_costs) + "/"
 
     env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                        nbs_shares, light, train_set=train_set, test_set=test_set[0], trans_costs=trans_costs, discretized=False, device=device)
+                                                        nbs_shares, light, train_set=train_set, test_set=val_set, trans_costs=trans_costs, discretized=False, device=device)
     val_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
                                                             nbs_shares, light, train_set=val_set, test_set=val_set, trans_costs=trans_costs, discretized=False, device=device)
 
@@ -645,7 +655,7 @@ def train_ddpg(config):
     hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/ddpg_hyperparameters/" + ddpg_model_type + "/" + time_frame + "/" + str(trans_costs) + "/"
 
     env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
-                                                        nbs_shares, light, train_set=train_set, test_set=test_set[0], trans_costs=trans_costs, discretized=False, device=device)
+                                                        nbs_shares, light, train_set=train_set, test_set=val_set, trans_costs=trans_costs, discretized=False, device=device)
     val_env = DeepHedgingEnvironment.DeepHedgingEnvironment(nbs_point_traj, r_borrow, r_lend, S_0, T, option_type, position_type, strike, V_0, prepro_stock,
                                                             nbs_shares, light, train_set=val_set, test_set=val_set, trans_costs=trans_costs, discretized=False, device=device)
 
@@ -744,7 +754,7 @@ def tune_pg():
     with open(hyperparameter_path + "train_losses/" + "pg_train_losses_" + config_str + ".pickle", "rb") as file:
         pg_train_losses = pickle.load(file)
 
-    plot_training_losses(pg_train_losses[1:], model_name="pg", hyperparameter_path=hyperparameter_path)
+    plot_training_losses(pg_train_losses, model_name="pg", hyperparameter_path=hyperparameter_path)
 
 def tune_dqn():
     hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/dqn_hyperparameters/" + dqn_model_type + "/" + time_frame + "/" + str(trans_costs) + "/"
@@ -800,19 +810,38 @@ def tune_ddpg():
 
 """Plotting actions of models for a single underlying stock price path"""
 def plot_actions(path, BS_actions, model_actions, model_labels):
-    fig, ax1 = plt.subplots(figsize=(8.6, 4.3))
-    plt.grid("both")
-    ax1.set_xlabel("Time Step $(t)$", fontsize=15)
-    ax1.set_ylabel("Hedging Position $(X_{t+1})$", fontsize=15)
-    ax1.plot(BS_actions, label="B-S DH (Baseline)")
+    fig, ax1 = plt.subplots(figsize=(12, 6))
+    linestyle_tuple = [
+    # ('loosely dotted',        (0, (1, 10))),
+    # ('dotted',                (0, (1, 5))),
+    # ('longer dash with offset', (5, (30, 3))),
+    ('long dash with offset', (5, (10, 3))),
+    ('densely dotted',        (0, (1, 1))),
+
+    # ('loosely dashed',        (0, (5, 10))),
+    # ('dashed',                (0, (5, 5))),
+    ('densely dashed',        (0, (5, 1))),
+
+    # ('loosely dashdotted',    (0, (3, 10, 1, 10))),
+    # ('dashdotted',            (0, (3, 5, 1, 5))),
+    ('densely dashdotted',    (0, (5, 1, 1, 1))),
+
+    # ('dashdotdotted',         (0, (3, 5, 1, 5, 1, 5))),
+    # ('loosely dashdotdotted', (0, (3, 10, 1, 10, 1, 10))),
+    ('densely dashdotdotted', (0, (5, 1, 1, 1, 1, 1)))
+    ]
+    ax1.grid("both")
+    ax1.set_xlabel("Time Step $(t)$", fontsize=13)
+    ax1.set_ylabel("Hedging Position $(X_{t+1})$", fontsize=13)
+    ax1.plot(BS_actions, label="B-S DH (Baseline)", linewidth=2.0, linestyle=linestyle_tuple[0][1])
     for i, model_label in enumerate(model_labels):
-        ax1.plot(model_actions[i], label=model_label)
+        ax1.plot(model_actions[i], label=model_label, linewidth=2.0, linestyle=linestyle_tuple[i+1][1])
     plt.legend(loc="upper left", fontsize=11)
     ax2 = ax1.twinx()
     # ax2.set_ylim([95, 155])
     color = "k"
-    ax2.set_ylabel("Underlying Stock Price $(S_t)$", fontsize=15, color=color)
-    ax2.plot(path, label="Underlying Stock Price", color=color)
+    ax2.set_ylabel("Underlying Stock Price $(S_t)$", fontsize=13, color=color)
+    ax2.plot(path, label="Underlying Stock Price", linewidth=2.0, color=color)
     ax2.tick_params(axis="y", labelcolor=color)
     
     plt.legend(loc="lower right", fontsize=11)
@@ -862,16 +891,49 @@ def plot_ppo_losses():
     plt.close()
 
 """Get actions from all models"""
-discretized_actions = np.arange(start=-0.5, stop=2.0, step=0.05)
+discretized_actions = np.arange(start=0.0, stop=1.0, step=0.02)
 
-# pg_actions = train_test_pg()
-# dqn_actions = discretized_actions[train_test_dqn(dueling=False, double=False).astype(int)]
-# double_dqn_actions = discretized_actions[train_test_dqn(dueling=False, double=True).astype(int)]
-# dueling_dqn_actions = discretized_actions[train_test_dqn(dueling=True, double=False).astype(int)]
-# dueling_double_dqn_actions = discretized_actions[train_test_dqn(dueling=True, double=True).astype(int)]
-# ppo_actions = train_test_ppo()
-# ddpg_actions = train_test_ddpg()
-# td_ddpg_actions = train_test_ddpg(twin_delayed=True)
+# pg_actions, pg_test_losses = train_test_pg(train=True)
+
+# dqn_actions_indices, dqn_test_losses = train_test_dqn(train=True, dueling=False, double=False)
+# dqn_actions = discretized_actions[dqn_actions_indices.astype(int)]
+
+# double_dqn_actions_indices, double_dqn_test_losses = train_test_dqn(dueling=False, double=True)
+# double_dqn_actions = discretized_actions[double_dqn_actions_indices.astype(int)]
+
+# dueling_dqn_actions_indices, dueling_dqn_test_losses = train_test_dqn(train=True, dueling=True, double=False)
+# dueling_dqn_actions = discretized_actions[dueling_dqn_actions_indices.astype(int)]
+
+# dueling_double_dqn_actions_indices, dueling_double_dqn_test_losses = train_test_dqn(dueling=True, double=True)
+# dueling_double_dqn_actions = discretized_actions[dueling_double_dqn_actions_indices.astype(int)]
+
+# ppo_actions, ppo_test_losses = train_test_ppo(train=True)
+
+# ddpg_actions, ddpg_test_losses = train_test_ddpg()
+
+# td_ddpg_actions, td_ddpg_test_losses = train_test_ddpg(twin_delayed=True)
+
+
+
+# all_algorithms_test_losses = [pg_test_losses, bs_rsmse_list, ppo_test_losses, dueling_dqn_test_losses, td_ddpg_test_losses, ddpg_test_losses, dueling_double_dqn_test_losses, dqn_test_losses, double_dqn_test_losses]
+
+# with open(global_path_prefix + "option_hedging/all_test_losses.pickle", 'wb') as file:
+#     pickle.dump(all_algorithms_test_losses, file)
+# with open(global_path_prefix + "option_hedging/all_test_losses.pickle", "rb") as file:
+#     all_algorithms_test_losses = pickle.load(file)
+
+# all_algorithms_names = ["PG", "B-S DH", "PPO", "Dueling DQL",  "TD3", "DDPG", "Dueling Double DQL", "DQL", "Double DQL"]
+
+# top_row = "||"
+# for name in all_algorithms_names:
+#     top_row += "{:20s}|".format(name)
+# print(top_row)
+# for i, test_losses_i in enumerate(all_algorithms_test_losses):
+#     current_row = "{:20s} & ".format(all_algorithms_names[i])
+#     for j, test_losses_j in enumerate(all_algorithms_test_losses):
+#         p_value = ttest_ind(test_losses_i, test_losses_j, equal_var=False, alternative="less").pvalue
+#         current_row += "{:.2f} & ".format(p_value)
+#     print(current_row)
 
 # model_actions = np.stack([pg_actions, dqn_actions, double_dqn_actions, dueling_dqn_actions, dueling_double_dqn_actions, ppo_actions, ddpg_actions, td_ddpg_actions])
 
@@ -885,9 +947,17 @@ discretized_actions = np.arange(start=-0.5, stop=2.0, step=0.05)
 # model_labels = ["PG", "Dueling DQL", "PPO", "TD3"]
 
 # plot_actions(test_set_DH[:,0], bs_actions[:,0], model_actions[:,:,0], model_labels)
-plot_ppo_losses()
+# plot_ppo_losses()
 
-# tune_ddpg()
+
+
+
+
+
+
+
+tune_pg()
+
 
 
 

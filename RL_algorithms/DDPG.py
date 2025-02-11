@@ -164,10 +164,10 @@ class DDPG:
         episode_val_loss = []
 
         if lr_schedule:
-            self.value_scheduler = lr_scheduler.LinearLR(self.value_optimizer, start_factor=1.0, end_factor=0.005, total_iters=episodes)
+            self.value_scheduler = lr_scheduler.LinearLR(self.value_optimizer, start_factor=1.0, end_factor=0.0, total_iters=episodes)
             if self.twin_delayed:
-                self.value2_scheduler = lr_scheduler.LinearLR(self.value2_optimizer, start_factor=1.0, end_factor=0.005, total_iters=episodes)
-            self.policy_scheduler = lr_scheduler.LinearLR(self.policy_optimizer, start_factor=1.0, end_factor=0.005, total_iters=episodes)
+                self.value2_scheduler = lr_scheduler.LinearLR(self.value2_optimizer, start_factor=1.0, end_factor=0.0, total_iters=episodes)
+            self.policy_scheduler = lr_scheduler.LinearLR(self.policy_optimizer, start_factor=1.0, end_factor=0.0, total_iters=episodes)
 
         self.epsilon = 0.5
         epsilon_decay = self.epsilon/(episodes+1)
@@ -218,9 +218,9 @@ class DDPG:
                 print(f"Episode {e}/{episodes-1}, Validation Loss: {val_rsmse}")
             
             # Early stopping
-            # if len(episode_val_loss) > 10 and val_rsmse < BS_rsmse:
-            #     if min(episode_val_loss[:-10]) < min(episode_val_loss[-10:]):
-            #         break
+            if len(episode_val_loss) > 5 and val_rsmse < BS_rsmse:
+                if episode_val_loss[-6] < min(episode_val_loss[-5:]):
+                    break
 
         return episode_val_loss
 

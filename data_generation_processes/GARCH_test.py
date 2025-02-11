@@ -13,11 +13,12 @@ from GARCH import GARCH
 
 stock = "^GSPC"
 garch_type = "vanilla"
-start="1986-12-31" 
-end="2010-04-01"
-interval="1d"
+start="2000-11-15"
+end="2024-10-15"
+interval= "1mo"             # Valid intervals: [1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo]
+multiply = False
 
-model = GARCH(stock=stock, start=start, end=end, interval=interval, type=garch_type)
+model = GARCH(stock=stock, start=start, end=end, interval=interval, type=garch_type, multiply=multiply)
 # model = GARCH(stock=stock, start="2024-01-01", end="2024-09-20", interval="1h", type="gjr")
 
 """Training"""
@@ -35,10 +36,16 @@ x = model.generate(S_0=100, batch_size=2**17, num_points=252*36, load_params=Tru
 print(x.shape)
 log_returns = np.log(x/np.roll(x,1,axis=1))[:,1:]
 mu = np.mean(log_returns,axis=1)                                                                  # expected value of r_t
-print("DATA MU: ", np.mean(model.r_data/100))
+if multiply:
+    print("DATA MU: ", np.mean(model.r_data/100))
+else:
+    print("DATA MU: ", np.mean(model.r_data))
 print("GENERATED MU: ", np.mean(mu))
 h = np.var(log_returns,axis=1)                                                                    # conditional variance of a_t
-print("DATA VAR:", np.var(model.r_data/100))
+if multiply:
+    print("DATA VAR:", np.var(model.r_data/100))
+else:
+    print("DATA VAR:", np.var(model.r_data))
 print("GENERATED VAR:", np.mean(h))
 plt.figure(figsize=(12,6))
 plt.plot(x[0].T)
@@ -52,12 +59,15 @@ plt.close()
 market_data = yf.download(stock, start=start, end=end, interval=interval,timeout=60)
 log_returns = np.log(market_data['Close'] / market_data['Close'].shift(1)).dropna()
 
-mu = log_returns.mean() * 252
-sigma = log_returns.std() * np.sqrt(252)
-print(f"Estimated Annualized Mu (drift) from data: {mu}")
-print(f"Estimated Annulaized Sigma (volatility) from data: {sigma}")
+# mu = log_returns.mean() * 252
+# sigma = log_returns.std() * np.sqrt(252)
+# print(f"Estimated Annualized Mu (drift) from data: {mu}")
+# print(f"Estimated Annualized Sigma (volatility) from data: {sigma}")
 
-data = log_returns.to_numpy()*100
+if multiply:
+    data = log_returns.to_numpy()*100
+else:
+    data = log_returns.to_numpy()
 if garch_type == "vanilla":
     model1 = arch_model(data.T, vol='Garch', p=1, q=1)
 elif garch_type == "gjr":

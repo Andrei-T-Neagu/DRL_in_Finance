@@ -104,7 +104,7 @@ class PG:
         episode_val_loss = []
 
         if lr_schedule:
-            self.scheduler = lr_scheduler.LinearLR(self.optimizer, start_factor=1.0, end_factor=0.1, total_iters=episodes)
+            self.scheduler = lr_scheduler.LinearLR(self.optimizer, start_factor=1.0, end_factor=0.0, total_iters=episodes)
         
         print("TRAINING PG: ")
         for e in range(episodes):
@@ -145,12 +145,11 @@ class PG:
                 print(f"Episode {e}/{episodes-1}, Validation RSMSE: {val_rsmse}")
         
             # Early stopping
-            if e >= 12000:
-                break 
-            # if len(episode_val_loss) > 10 and val_rsmse < BS_rsmse:
-            #     if min(episode_val_loss[:-10]) < min(episode_val_loss[-10:]):
-            #         break
-
+            if len(episode_val_loss) > 5 and val_rsmse < BS_rsmse:
+                if episode_val_loss[-6] < min(episode_val_loss[-5:]):
+                    break
+#  0   1   2   3   4   5   6   7   8   9
+#-10  -9  -8  -7  -6  -5  -4  -3  -2  -1
         return episode_val_loss
 
     def test(self, env, render=False):

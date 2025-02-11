@@ -32,7 +32,7 @@ class DeepHedgingEnvironment():
         
         self.device = device
         self.discretized = discretized                                                                      # For if the action space is discretized
-        self.discretized_actions = torch.arange(start=-0.5, end=2.0, step=0.05, device=self.device)
+        self.discretized_actions = torch.arange(start=0, end=1.0, step=0.02, device=self.device)
 
         self.train_set = train_set.to(self.device)
         self.test_set = test_set.to(self.device)
@@ -102,9 +102,9 @@ class DeepHedgingEnvironment():
 
         # Construct feature vector at the beginning of time t, S_t ad V_t are normalized 
         if self.light == True:
-            self.input_t = torch.stack((self.dt * self.t * torch.ones(self.batch_size, device=self.device), self.S_t, self.delta_t), dim=1)
+            self.input_t = torch.stack((self.dt * self.t * torch.ones(self.batch_size, device=self.device), self.S_t), dim=1)
         else:
-            self.input_t = torch.stack((self.dt * self.t * torch.ones(self.batch_size, device=self.device), self.S_t, self.delta_t, self.V_t/self.V_0), dim=1)
+            self.input_t = torch.stack((self.dt * self.t * torch.ones(self.batch_size, device=self.device), self.S_t, self.V_t/self.V_0), dim=1)
         
         return self.input_t
 
@@ -155,9 +155,9 @@ class DeepHedgingEnvironment():
 
         # input at the next time step
         if self.light == True:
-            self.input_t = torch.stack((self.dt * self.t * torch.ones(self.batch_size, device=self.device), self.S_t, self.delta_t_next), dim=1)
+            self.input_t = torch.stack((self.dt * self.t * torch.ones(self.batch_size, device=self.device), self.S_t), dim=1)
         else:
-            self.input_t = torch.stack((self.dt * self.t * torch.ones(self.batch_size, device=self.device), self.S_t, self.delta_t_next, self.V_t/self.V_0), dim=1)
+            self.input_t = torch.stack((self.dt * self.t * torch.ones(self.batch_size, device=self.device), self.S_t, self.V_t/self.V_0), dim=1)
         
         self.t += 1                                                             # iterate time step
         if self.t == self.N:                                                    # if t is the final time step
