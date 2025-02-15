@@ -34,7 +34,7 @@ double=False
 dueling=False
 T = 252/252
 
-cpu = False
+cpu = True
 cpus = 1
 num_gpus = 1
 gpus = 0.05
@@ -169,11 +169,11 @@ def generate_garch_dataset(dataset_type="train_set", size=train_size):
         torch.save(dataset, global_path_prefix  + "option_hedging/" + str(dataset_type))
 
 """Training the garch model and generating the datasets"""
-train_garch()
-garch_model.print_params()
-generate_garch_dataset(dataset_type="train_set", size=train_size)
-generate_garch_dataset(dataset_type="val_set", size=val_size)
-generate_garch_dataset(dataset_type="test_set", size=test_size)
+# train_garch()
+# garch_model.print_params()
+# generate_garch_dataset(dataset_type="train_set", size=train_size)
+# generate_garch_dataset(dataset_type="val_set", size=val_size)
+# generate_garch_dataset(dataset_type="test_set", size=test_size)
 
 # Select the device
 if cpu:
@@ -254,7 +254,7 @@ def train_test_pg(train=False):
         "lr": 0.00001,
         "batch_size": 256,
         "num_layers": 4,
-        "hidden_size": 128,
+        "hidden_size": 64,
     }
 
     hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/pg_hyperparameters/" + time_frame + "/" + str(trans_costs) + "/"
@@ -297,7 +297,7 @@ def train_test_pg(train=False):
             pg_train_losses = pickle.load(file)
 
         pg_train_losses_fig = plt.figure(figsize=(12, 6))
-        plt.plot(pg_train_losses, label="RSMSE")
+        plt.plot(pg_train_losses[1:], label="RSMSE")
         plt.xlabel("Episodes (1000s)")
         plt.ylabel("RSMSE")
         plt.legend()
@@ -893,25 +893,25 @@ def plot_ppo_losses():
 """Get actions from all models"""
 discretized_actions = np.arange(start=0.0, stop=1.0, step=0.02)
 
-# pg_actions, pg_test_losses = train_test_pg(train=True)
+pg_actions, pg_test_losses = train_test_pg(train=False)
 
 # dqn_actions_indices, dqn_test_losses = train_test_dqn(train=True, dueling=False, double=False)
 # dqn_actions = discretized_actions[dqn_actions_indices.astype(int)]
 
-# double_dqn_actions_indices, double_dqn_test_losses = train_test_dqn(dueling=False, double=True)
+# double_dqn_actions_indices, double_dqn_test_losses = train_test_dqn(train=True, dueling=False, double=True)
 # double_dqn_actions = discretized_actions[double_dqn_actions_indices.astype(int)]
 
 # dueling_dqn_actions_indices, dueling_dqn_test_losses = train_test_dqn(train=True, dueling=True, double=False)
 # dueling_dqn_actions = discretized_actions[dueling_dqn_actions_indices.astype(int)]
 
-# dueling_double_dqn_actions_indices, dueling_double_dqn_test_losses = train_test_dqn(dueling=True, double=True)
+# dueling_double_dqn_actions_indices, dueling_double_dqn_test_losses = train_test_dqn(train=True, dueling=True, double=True)
 # dueling_double_dqn_actions = discretized_actions[dueling_double_dqn_actions_indices.astype(int)]
 
 # ppo_actions, ppo_test_losses = train_test_ppo(train=True)
 
-# ddpg_actions, ddpg_test_losses = train_test_ddpg()
+# ddpg_actions, ddpg_test_losses = train_test_ddpg(train=True)
 
-# td_ddpg_actions, td_ddpg_test_losses = train_test_ddpg(twin_delayed=True)
+# td_ddpg_actions, td_ddpg_test_losses = train_test_ddpg(train=True, twin_delayed=True)
 
 
 
@@ -955,9 +955,9 @@ discretized_actions = np.arange(start=0.0, stop=1.0, step=0.02)
 
 
 
-
-tune_pg()
-
+# tune_dqn()
+# tune_ddpg()
+# tune_ppo()
 
 
 

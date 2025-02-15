@@ -11,8 +11,10 @@ from rpy2.robjects.packages import importr
 from rpy2.robjects import numpy2ri
 from GARCH import GARCH
 
+# from vanilla_garch import GARCH
+
 stock = "^GSPC"
-garch_type = "vanilla"
+garch_type = "gjr"
 start="2000-11-15"
 end="2024-10-15"
 interval= "1mo"             # Valid intervals: [1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo]
@@ -32,7 +34,7 @@ plt.savefig("garch_nll_losses.png")
 plt.close()
 
 """Generating"""
-x = model.generate(S_0=100, batch_size=2**17, num_points=252*36, load_params=True)
+x = model.generate(S_0=100, batch_size=2**17, num_points=12, load_params=True)
 print(x.shape)
 log_returns = np.log(x/np.roll(x,1,axis=1))[:,1:]
 mu = np.mean(log_returns,axis=1)                                                                  # expected value of r_t
@@ -75,7 +77,10 @@ elif garch_type == "gjr":
 elif garch_type == "e":
     model1 = arch_model(data.T, vol='EGarch', p=1, q=1, o=1)
 result1 = model1.fit()
+print("PYTHON GARCH PARAMETERS: ")
 print(result1.summary())
+
+print("MY GARCH PARAMETERS: ")
 model.print_params()
 
 """Comparison of parameters with rugarch R library"""
@@ -112,5 +117,7 @@ robjects.globalenv['returns_data'] = returns_matrix
 garch_fit = robjects.r(r_code)
 
 # Print or inspect the model fit result
+print("R GARCH PARAMETERS: ")
 print(garch_fit)
+print("MY GARCH PARAMETERS: ")
 model.print_params()

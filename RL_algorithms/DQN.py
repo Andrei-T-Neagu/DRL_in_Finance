@@ -171,7 +171,7 @@ class DoubleDQN:
             if self.epsilon > self.epsilon_min:
                 self.epsilon *= self.epsilon_decay
         
-            if render and e % 1000 == 0:
+            if render and e % 10000 == 0:
                 print(f"Episode {e}/{episodes-1}, Validation RSMSE: {val_rsmse}")
 
             # Early stopping
