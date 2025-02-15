@@ -893,7 +893,7 @@ def plot_ppo_losses():
 """Get actions from all models"""
 discretized_actions = np.arange(start=0.0, stop=1.0, step=0.02)
 
-pg_actions, pg_test_losses = train_test_pg(train=False)
+# pg_actions, pg_test_losses = train_test_pg(train=True)
 
 # dqn_actions_indices, dqn_test_losses = train_test_dqn(train=True, dueling=False, double=False)
 # dqn_actions = discretized_actions[dqn_actions_indices.astype(int)]
