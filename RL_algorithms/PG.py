@@ -148,8 +148,7 @@ class PG:
             if len(episode_val_loss) > 5 and val_rsmse < BS_rsmse:
                 if episode_val_loss[-6] < min(episode_val_loss[-5:]):
                     break
-#  0   1   2   3   4   5   6   7   8   9
-#-10  -9  -8  -7  -6  -5  -4  -3  -2  -1
+
         return episode_val_loss
 
     def test(self, env, render=False):
