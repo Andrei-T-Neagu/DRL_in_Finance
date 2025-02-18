@@ -29,12 +29,13 @@ from scipy.stats import ttest_ind
 start_total_time = datetime.datetime.now()
 episodes = 200000
 trans_costs = 0.00              #proportional transaction costs 0.0 or 0.01
-twin_delayed=False
+twin_delayed=True
 double=False
 dueling=False
 T = 252/252
 
 cpu = True
+num_cpus = 60
 cpus = 1
 num_gpus = 1
 gpus = 0.05
@@ -169,11 +170,11 @@ def generate_garch_dataset(dataset_type="train_set", size=train_size):
         torch.save(dataset, global_path_prefix  + "option_hedging/" + str(dataset_type))
 
 """Training the garch model and generating the datasets"""
-# train_garch()
-# garch_model.print_params()
-# generate_garch_dataset(dataset_type="train_set", size=train_size)
-# generate_garch_dataset(dataset_type="val_set", size=val_size)
-# generate_garch_dataset(dataset_type="test_set", size=test_size)
+train_garch()
+garch_model.print_params()
+generate_garch_dataset(dataset_type="train_set", size=train_size)
+generate_garch_dataset(dataset_type="val_set", size=val_size)
+generate_garch_dataset(dataset_type="test_set", size=test_size)
 
 # Select the device
 if cpu:
@@ -678,10 +679,10 @@ def train_ddpg(config):
 
 def raytune(train_func, configs, model_name):
     if cpu:
-        ray.init()
+        ray.init(num_cpus=num_cpus)
         trainable_with_gpu = tune.with_resources(train_func, {"cpu": cpus})
     else:
-        ray.init(num_gpus=num_gpus)
+        ray.init(num_cpus=num_cpus, num_gpus=num_gpus)
         trainable_with_gpu = tune.with_resources(train_func, {"gpu": gpus})
 
     tuner = tune.Tuner(
@@ -957,7 +958,7 @@ discretized_actions = np.arange(start=0.0, stop=1.0, step=0.02)
 
 # tune_dqn()
 # tune_ddpg()
-# tune_ppo()
+tune_ppo()
 
 
 
