@@ -29,8 +29,8 @@ from scipy.stats import ttest_ind
 start_total_time = datetime.datetime.now()
 episodes = 200000
 trans_costs = 0.00              #proportional transaction costs 0.0 or 0.01
-twin_delayed=True
-double=False
+twin_delayed=False
+double=True
 dueling=True
 T = 252/252
 
@@ -956,7 +956,7 @@ discretized_actions = np.arange(start=0.0, stop=1.0, step=0.02)
 
 
 
-tune_dqn()
+# tune_dqn()
 # tune_ddpg()
 tune_ppo()
 
