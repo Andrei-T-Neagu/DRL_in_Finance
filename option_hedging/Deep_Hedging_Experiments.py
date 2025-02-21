@@ -35,7 +35,7 @@ dueling=True
 T = 252/252
 
 cpu = True
-num_cpus = 60
+num_cpus = 24
 cpus = 1
 num_gpus = 1
 gpus = 0.05
@@ -958,7 +958,7 @@ discretized_actions = np.arange(start=0.0, stop=1.0, step=0.02)
 
 # tune_dqn()
 # tune_ddpg()
-tune_ppo()
+# tune_ppo()
 
 
 
