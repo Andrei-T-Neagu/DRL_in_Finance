@@ -32,7 +32,7 @@ class DeepHedgingEnvironment():
         
         self.device = device
         self.discretized = discretized                                                                      # For if the action space is discretized
-        self.discretized_actions = torch.arange(start=0, end=1.0, step=0.02, device=self.device)
+        self.discretized_actions = torch.arange(start=0, end=1.02, step=0.02, device=self.device)
 
         self.train_set = train_set.to(self.device)
         self.test_set = test_set.to(self.device)

@@ -27,14 +27,14 @@ import copy
 from scipy.stats import ttest_ind
 
 start_total_time = datetime.datetime.now()
-episodes = 500000
+episodes = 200000
 trans_costs = 0.00              #proportional transaction costs 0.0 or 0.01
 twin_delayed=False
 double=False
 dueling=False
 T = 252/252
 
-cpu = False
+cpu = True
 num_cpus = 60
 cpus = 1
 num_gpus = 1
@@ -888,28 +888,29 @@ def plot_ppo_losses():
     plt.close()
 
 """Get actions from all models"""
-discretized_actions = np.arange(start=0.0, stop=1.0, step=0.02)
+discretized_actions = np.arange(start=0.0, stop=1.02, step=0.02)
+
 train=True
 
-pg_actions, pg_test_losses = train_test_pg(train=train)
+# pg_actions, pg_test_losses = train_test_pg(train=train)
 
-dqn_actions_indices, dqn_test_losses = train_test_dqn(train=train, dueling=False, double=False)
-dqn_actions = discretized_actions[dqn_actions_indices.astype(int)]
+# dqn_actions_indices, dqn_test_losses = train_test_dqn(train=train, dueling=False, double=False)
+# dqn_actions = discretized_actions[dqn_actions_indices.astype(int)]
 
-double_dqn_actions_indices, double_dqn_test_losses = train_test_dqn(train=train, dueling=False, double=True)
-double_dqn_actions = discretized_actions[double_dqn_actions_indices.astype(int)]
+# double_dqn_actions_indices, double_dqn_test_losses = train_test_dqn(train=train, dueling=False, double=True)
+# double_dqn_actions = discretized_actions[double_dqn_actions_indices.astype(int)]
 
-dueling_dqn_actions_indices, dueling_dqn_test_losses = train_test_dqn(train=train, dueling=True, double=False)
-dueling_dqn_actions = discretized_actions[dueling_dqn_actions_indices.astype(int)]
+# dueling_dqn_actions_indices, dueling_dqn_test_losses = train_test_dqn(train=train, dueling=True, double=False)
+# dueling_dqn_actions = discretized_actions[dueling_dqn_actions_indices.astype(int)]
 
-dueling_double_dqn_actions_indices, dueling_double_dqn_test_losses = train_test_dqn(train=train, dueling=True, double=True)
-dueling_double_dqn_actions = discretized_actions[dueling_double_dqn_actions_indices.astype(int)]
+# dueling_double_dqn_actions_indices, dueling_double_dqn_test_losses = train_test_dqn(train=train, dueling=True, double=True)
+# dueling_double_dqn_actions = discretized_actions[dueling_double_dqn_actions_indices.astype(int)]
 
-ppo_actions, ppo_test_losses = train_test_ppo(train=train)
+# ppo_actions, ppo_test_losses = train_test_ppo(train=train)
 
-ddpg_actions, ddpg_test_losses = train_test_ddpg(train=train)
+# ddpg_actions, ddpg_test_losses = train_test_ddpg(train=train)
 
-td_ddpg_actions, td_ddpg_test_losses = train_test_ddpg(train=train, twin_delayed=True)
+# td_ddpg_actions, td_ddpg_test_losses = train_test_ddpg(train=train, twin_delayed=True)
 
 
 
@@ -953,7 +954,7 @@ td_ddpg_actions, td_ddpg_test_losses = train_test_ddpg(train=train, twin_delayed
 
 
 
-# tune_dqn()
+tune_dqn()
 # tune_ddpg()
 # tune_ppo()
 
