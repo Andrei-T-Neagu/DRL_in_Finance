@@ -269,9 +269,8 @@ def train_test_pg(train=False):
     pg_agent = PG.PG(config=config, state_size=state_size, action_size=1, device=device)
     if train:
         start_time = datetime.datetime.now()
-        pg_train_losses = pg_agent.train(deep_hedging_env, validation_deep_hedging_env, episodes=episodes, BS_rsmse=rsmse_DH_leland, lr_schedule=lr_schedule, render=True)
+        pg_train_losses = pg_agent.train(deep_hedging_env, validation_deep_hedging_env, episodes=episodes, BS_rsmse=rsmse_DH_leland, lr_schedule=lr_schedule, render=True, path=hyperparameter_path)
         time_taken = str(datetime.datetime.now() - start_time)
-        pg_agent.save(hyperparameter_path + "best_pg_model.pth")
     else:
         pg_agent.load(hyperparameter_path + "best_pg_model.pth")
     pg_rsmse_list = []
@@ -347,9 +346,8 @@ def train_test_dqn(train=False, dueling=False, double=False):
     dqn_agent = DQN.DoubleDQN(config=config, state_size=state_size, action_size=action_size, double=double, dueling=dueling, device=device)
     if train:
         start_time = datetime.datetime.now()
-        dqn_train_losses = dqn_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule, render=True)
+        dqn_train_losses = dqn_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule, render=True, path=hyperparameter_path)
         time_taken = str(datetime.datetime.now() - start_time)
-        dqn_agent.save(hyperparameter_path + "best_dqn_model.pth")
     else:
         dqn_agent.load(hyperparameter_path + "best_dqn_model.pth")
     dqn_rsmse_list = []
@@ -401,9 +399,9 @@ def train_test_dqn(train=False, dueling=False, double=False):
 def train_test_ppo(train=False):
     config={
         "lr": 0.00001,
-        "batch_size": 128,
-        "num_layers": 2,
-        "hidden_size": 256,
+        "batch_size": 256,
+        "num_layers": 4,
+        "hidden_size": 64,
     }
 
     hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/ppo_hyperparameters/" + time_frame + "/" + str(trans_costs) + "/"
@@ -417,9 +415,8 @@ def train_test_ppo(train=False):
     ppo_agent = PPO.PPO(config=config, state_size=state_size, action_size=1, device=device)
     if train:
         start_time = datetime.datetime.now()
-        ppo_train_losses = ppo_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule, render=True)
+        ppo_train_losses = ppo_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule, render=True, path=hyperparameter_path)
         time_taken = str(datetime.datetime.now() - start_time)
-        ppo_agent.save(hyperparameter_path + "best_ppo_model.pth")
     else:
         ppo_agent.load(hyperparameter_path + "best_ppo_model.pth")
     ppo_rsmse_list = []
@@ -488,9 +485,8 @@ def train_test_ddpg(train=False, twin_delayed=twin_delayed):
     ddpg_agent = DDPG.DDPG(config=config, state_size=state_size, action_size=1, twin_delayed=twin_delayed, device=device)
     if train:
         start_time = datetime.datetime.now()
-        ddpg_train_losses = ddpg_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule, render=True)
+        ddpg_train_losses = ddpg_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule, render=True, path=hyperparameter_path)
         time_taken = str(datetime.datetime.now() - start_time)
-        ddpg_agent.save(hyperparameter_path + "best_ddpg_model.pth")
     else:
         ddpg_agent.load(hyperparameter_path + "best_ddpg_model.pth")
     ddpg_rsmse_list = []
@@ -865,10 +861,10 @@ def plot_training_losses(train_losses, model_name, hyperparameter_path):
     plt.close()
 
 def plot_ppo_losses():
-    first_path = global_path_prefix + "option_hedging/hyperparameters/ppo_hyperparameters/year/0.0/train_losses/ppo_train_losses_lr=0.0001|batch_size=256|num_layers=2|hidden_size=128.pickle"
-    second_path = global_path_prefix + "option_hedging/hyperparameters/ppo_hyperparameters/year/0.0/train_losses/ppo_train_losses_lr=0.0001|batch_size=256|num_layers=4|hidden_size=64.pickle"
-    third_path = global_path_prefix + "option_hedging/hyperparameters/ppo_hyperparameters/year/0.0/train_losses/ppo_train_losses_lr=1e-05|batch_size=256|num_layers=4|hidden_size=256.pickle"
-    fourth_path = global_path_prefix + "option_hedging/hyperparameters/ppo_hyperparameters/year/0.0/train_losses/ppo_train_losses_lr=1e-05|batch_size=256|num_layers=2|hidden_size=256.pickle"
+    first_path = global_path_prefix + "option_hedging/hyperparameters/ppo_hyperparameters/year/0.0/train_losses/ppo_train_losses_lr=1e-05|batch_size=256|num_layers=4|hidden_size=128.pickle"
+    second_path = global_path_prefix + "option_hedging/hyperparameters/ppo_hyperparameters/year/0.0/train_losses/ppo_train_losses_lr=1e-05|batch_size=256|num_layers=4|hidden_size=256.pickle"
+    third_path = global_path_prefix + "option_hedging/hyperparameters/ppo_hyperparameters/year/0.0/train_losses/ppo_train_losses_lr=1e-05|batch_size=256|num_layers=4|hidden_size=64.pickle"
+    fourth_path = global_path_prefix + "option_hedging/hyperparameters/ppo_hyperparameters/year/0.0/train_losses/ppo_train_losses_lr=1e-05|batch_size=128|num_layers=2|hidden_size=256.pickle"
     with open(first_path, "rb") as file:
         first = pickle.load(file)
     with open(second_path, "rb") as file:
@@ -878,10 +874,10 @@ def plot_ppo_losses():
     with open(fourth_path, "rb") as file:
         fourth = pickle.load(file)
     train_losses_fig = plt.figure(figsize=(12, 6))
-    # plt.plot(first, label="first hyperparameter combination")
-    # plt.plot(second, label="second hyperparameter combination")
+    plt.plot(first, label="first hyperparameter combination")
+    plt.plot(second, label="second hyperparameter combination")
     plt.plot(third, label="third hyperparameter combination")
-    # plt.plot(fourth, label="fourth hyperparameter combination")
+    plt.plot(fourth, label="fourth hyperparameter combination")
     plt.xlabel("Updates (1000s)")
     # plt.yscale("log")
     plt.ylabel("log RSQP")
@@ -895,25 +891,25 @@ def plot_ppo_losses():
 discretized_actions = np.arange(start=0.0, stop=1.0, step=0.02)
 train=True
 
-# pg_actions, pg_test_losses = train_test_pg(train=train)
+pg_actions, pg_test_losses = train_test_pg(train=train)
 
-# dqn_actions_indices, dqn_test_losses = train_test_dqn(train=train, dueling=False, double=False)
-# dqn_actions = discretized_actions[dqn_actions_indices.astype(int)]
+dqn_actions_indices, dqn_test_losses = train_test_dqn(train=train, dueling=False, double=False)
+dqn_actions = discretized_actions[dqn_actions_indices.astype(int)]
 
-# double_dqn_actions_indices, double_dqn_test_losses = train_test_dqn(train=train, dueling=False, double=True)
-# double_dqn_actions = discretized_actions[double_dqn_actions_indices.astype(int)]
+double_dqn_actions_indices, double_dqn_test_losses = train_test_dqn(train=train, dueling=False, double=True)
+double_dqn_actions = discretized_actions[double_dqn_actions_indices.astype(int)]
 
-# dueling_dqn_actions_indices, dueling_dqn_test_losses = train_test_dqn(train=train, dueling=True, double=False)
-# dueling_dqn_actions = discretized_actions[dueling_dqn_actions_indices.astype(int)]
+dueling_dqn_actions_indices, dueling_dqn_test_losses = train_test_dqn(train=train, dueling=True, double=False)
+dueling_dqn_actions = discretized_actions[dueling_dqn_actions_indices.astype(int)]
 
-# dueling_double_dqn_actions_indices, dueling_double_dqn_test_losses = train_test_dqn(train=train, dueling=True, double=True)
-# dueling_double_dqn_actions = discretized_actions[dueling_double_dqn_actions_indices.astype(int)]
+dueling_double_dqn_actions_indices, dueling_double_dqn_test_losses = train_test_dqn(train=train, dueling=True, double=True)
+dueling_double_dqn_actions = discretized_actions[dueling_double_dqn_actions_indices.astype(int)]
 
 ppo_actions, ppo_test_losses = train_test_ppo(train=train)
 
-# ddpg_actions, ddpg_test_losses = train_test_ddpg(train=train)
+ddpg_actions, ddpg_test_losses = train_test_ddpg(train=train)
 
-# td_ddpg_actions, td_ddpg_test_losses = train_test_ddpg(train=train, twin_delayed=True)
+td_ddpg_actions, td_ddpg_test_losses = train_test_ddpg(train=train, twin_delayed=True)
 
 
 

@@ -118,12 +118,13 @@ class DoubleDQN:
         torch.save(self.model.state_dict(), name)
 
 # Training loop
-    def train(self, env, val_env, BS_rsmse, episodes=200, lr_schedule = True, render=False):
+    def train(self, env, val_env, BS_rsmse, episodes=200, lr_schedule = True, render=False, path=None):
         self.model.train()
         env.train()
         val_env.train()
 
         episode_val_loss = []
+        best_val_loss = 9999
 
         self.epsilon_decay = (episodes-10)/episodes
 
@@ -166,6 +167,8 @@ class DoubleDQN:
                 _, _, val_rsmse = self.test(val_env)
                 self.model.train()
                 episode_val_loss.append(val_rsmse)
+                if val_rsmse < best_val_loss and path is not None:
+                    self.save(path + "best_dqn_model.pth")
 
             # decay epsilon
             if self.epsilon > self.epsilon_min:

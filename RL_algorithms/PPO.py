@@ -78,7 +78,7 @@ class PPO:
             
         return advantages
 
-    def train(self, env, val_env, BS_rsmse, episodes=1000, lr_schedule=True, render=False):
+    def train(self, env, val_env, BS_rsmse, episodes=1000, lr_schedule=True, render=False, path=None):
         self.policy.train()
         self.value.train()
         env.train()
@@ -87,6 +87,7 @@ class PPO:
         self.N = env.N
         
         episode_val_loss = []
+        best_val_loss = 9999
 
         if lr_schedule:
             self.value_scheduler = lr_scheduler.LinearLR(self.value_optimizer, start_factor=1.0, end_factor=0.0, total_iters=episodes)
@@ -168,6 +169,8 @@ class PPO:
                 _, _, val_rsmse = self.test(val_env)
                 self.policy.train()
                 episode_val_loss.append(val_rsmse)
+                if val_rsmse < best_val_loss and path is not None:
+                    self.save(path + "best_ppo_model.pth")
 
             if render and episode % 1000 == 0:
                 print(f"Episode {episode}/{episodes-1}, Policy Loss: {loss_policy.item()}, Value Loss: {loss_value.item()}, Validation Loss: {val_rsmse}")
