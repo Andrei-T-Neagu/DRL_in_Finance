@@ -214,7 +214,7 @@ class DDPG:
                 _, _, val_rsmse = self.test(val_env)
                 self.policy.train()
                 episode_val_loss.append(val_rsmse)
-                if val_rsmse < best_val_loss and path is not None:
+                if val_rsmse < best_val_loss and path:
                     self.save(path + "best_ddpg_model.pth")
 
             if render and e % 10000 == 0:

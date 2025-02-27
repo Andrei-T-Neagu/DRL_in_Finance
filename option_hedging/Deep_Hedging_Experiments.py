@@ -271,8 +271,8 @@ def train_test_pg(train=False):
         start_time = datetime.datetime.now()
         pg_train_losses = pg_agent.train(deep_hedging_env, validation_deep_hedging_env, episodes=episodes, BS_rsmse=rsmse_DH_leland, lr_schedule=lr_schedule, render=True, path=hyperparameter_path)
         time_taken = str(datetime.datetime.now() - start_time)
-    else:
-        pg_agent.load(hyperparameter_path + "best_pg_model.pth")
+    
+    pg_agent.load(hyperparameter_path + "best_pg_model.pth")
     pg_rsmse_list = []
     for i in range(num_test_sets):
         deep_hedging_env.test_set = test_set[i].to(device)
@@ -348,8 +348,8 @@ def train_test_dqn(train=False, dueling=False, double=False):
         start_time = datetime.datetime.now()
         dqn_train_losses = dqn_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule, render=True, path=hyperparameter_path)
         time_taken = str(datetime.datetime.now() - start_time)
-    else:
-        dqn_agent.load(hyperparameter_path + "best_dqn_model.pth")
+
+    dqn_agent.load(hyperparameter_path + "best_dqn_model.pth")
     dqn_rsmse_list = []
     for i in range(num_test_sets):
         deep_hedging_env.test_set = test_set[i].to(device)
@@ -417,8 +417,8 @@ def train_test_ppo(train=False):
         start_time = datetime.datetime.now()
         ppo_train_losses = ppo_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule, render=True, path=hyperparameter_path)
         time_taken = str(datetime.datetime.now() - start_time)
-    else:
-        ppo_agent.load(hyperparameter_path + "best_ppo_model.pth")
+
+    ppo_agent.load(hyperparameter_path + "best_ppo_model.pth")
     ppo_rsmse_list = []
     for i in range(num_test_sets):
         deep_hedging_env.test_set = test_set[i].to(device)
@@ -487,8 +487,8 @@ def train_test_ddpg(train=False, twin_delayed=twin_delayed):
         start_time = datetime.datetime.now()
         ddpg_train_losses = ddpg_agent.train(deep_hedging_env, validation_deep_hedging_env, rsmse_DH_leland, episodes=episodes, lr_schedule=lr_schedule, render=True, path=hyperparameter_path)
         time_taken = str(datetime.datetime.now() - start_time)
-    else:
-        ddpg_agent.load(hyperparameter_path + "best_ddpg_model.pth")
+
+    ddpg_agent.load(hyperparameter_path + "best_ddpg_model.pth")
     ddpg_rsmse_list = []
     for i in range(num_test_sets):
         deep_hedging_env.test_set = test_set[i].to(device)
@@ -606,7 +606,7 @@ def train_dqn(config):
         pickle.dump(train_losses, file)
     
     _, _, rsmse = model.test(val_env)
-    
+
     with tempfile.TemporaryDirectory() as temp_checkpoint_dir:
         # This saves the model to the trial directory
         model.save(os.path.join(temp_checkpoint_dir, "dqn_model.pth"))
@@ -890,27 +890,27 @@ def plot_ppo_losses():
 """Get actions from all models"""
 discretized_actions = np.arange(start=0.0, stop=1.02, step=0.02)
 
-train=True
+training = True
 
-# pg_actions, pg_test_losses = train_test_pg(train=train)
+# pg_actions, pg_test_losses = train_test_pg(train=training)
 
-# dqn_actions_indices, dqn_test_losses = train_test_dqn(train=train, dueling=False, double=False)
+# dqn_actions_indices, dqn_test_losses = train_test_dqn(train=training, dueling=False, double=False)
 # dqn_actions = discretized_actions[dqn_actions_indices.astype(int)]
 
-# double_dqn_actions_indices, double_dqn_test_losses = train_test_dqn(train=train, dueling=False, double=True)
+# double_dqn_actions_indices, double_dqn_test_losses = train_test_dqn(train=training, dueling=False, double=True)
 # double_dqn_actions = discretized_actions[double_dqn_actions_indices.astype(int)]
 
-# dueling_dqn_actions_indices, dueling_dqn_test_losses = train_test_dqn(train=train, dueling=True, double=False)
+# dueling_dqn_actions_indices, dueling_dqn_test_losses = train_test_dqn(train=training, dueling=True, double=False)
 # dueling_dqn_actions = discretized_actions[dueling_dqn_actions_indices.astype(int)]
 
-# dueling_double_dqn_actions_indices, dueling_double_dqn_test_losses = train_test_dqn(train=train, dueling=True, double=True)
+# dueling_double_dqn_actions_indices, dueling_double_dqn_test_losses = train_test_dqn(train=training, dueling=True, double=True)
 # dueling_double_dqn_actions = discretized_actions[dueling_double_dqn_actions_indices.astype(int)]
 
-# ppo_actions, ppo_test_losses = train_test_ppo(train=train)
+# ppo_actions, ppo_test_losses = train_test_ppo(train=training)
 
-# ddpg_actions, ddpg_test_losses = train_test_ddpg(train=train)
+# ddpg_actions, ddpg_test_losses = train_test_ddpg(train=training)
 
-# td_ddpg_actions, td_ddpg_test_losses = train_test_ddpg(train=train, twin_delayed=True)
+# td_ddpg_actions, td_ddpg_test_losses = train_test_ddpg(train=training, twin_delayed=True)
 
 
 
