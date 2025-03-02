@@ -27,15 +27,15 @@ import copy
 from scipy.stats import ttest_ind
 
 start_total_time = datetime.datetime.now()
-episodes = 200000
+episodes = 500000
 trans_costs = 0.00              #proportional transaction costs 0.0 or 0.01
 twin_delayed=False
 double=False
 dueling=True
 T = 252/252
 
-cpu = True
-num_cpus = 24
+cpu = False
+num_cpus = 60
 cpus = 1
 num_gpus = 1
 gpus = 0.05
@@ -321,16 +321,16 @@ def train_test_pg(train=False):
 """Train and test DQN"""
 def train_test_dqn(train=False, dueling=False, double=False):
     if dueling and double:
-        config={"lr": 0.0001, "batch_size": 64, "num_layers": 3, "hidden_size": 128}
+        config={"lr": 0.0001, "batch_size": 256, "num_layers": 3, "hidden_size": 256}
         dqn_model_type = "dueling_double"
     elif dueling:
-        config={"lr": 0.0001, "batch_size": 64, "num_layers": 3, "hidden_size": 128}
+        config={"lr": 0.0001, "batch_size": 128, "num_layers": 3, "hidden_size": 256}
         dqn_model_type = "dueling"
     elif double:
-        config={"lr": 0.0001, "batch_size": 64, "num_layers": 4, "hidden_size": 256}
+        config={"lr": 0.0001, "batch_size": 64, "num_layers": 4, "hidden_size": 64}
         dqn_model_type = "double"
     else:
-        config={"lr": 0.0001, "batch_size": 64, "num_layers": 4, "hidden_size": 256}
+        config={"lr": 0.0001, "batch_size": 64, "num_layers": 4, "hidden_size": 128}
         dqn_model_type = "vanilla"
 
     hyperparameter_path = global_path_prefix + "option_hedging/hyperparameters/dqn_hyperparameters/" + dqn_model_type + "/" + time_frame + "/" + str(trans_costs) + "/"
@@ -892,25 +892,25 @@ discretized_actions = np.arange(start=0.0, stop=1.02, step=0.02)
 
 training = True
 
-# pg_actions, pg_test_losses = train_test_pg(train=training)
+pg_actions, pg_test_losses = train_test_pg(train=training)
 
-# dqn_actions_indices, dqn_test_losses = train_test_dqn(train=training, dueling=False, double=False)
-# dqn_actions = discretized_actions[dqn_actions_indices.astype(int)]
+dqn_actions_indices, dqn_test_losses = train_test_dqn(train=training, dueling=False, double=False)
+dqn_actions = discretized_actions[dqn_actions_indices.astype(int)]
 
-# double_dqn_actions_indices, double_dqn_test_losses = train_test_dqn(train=training, dueling=False, double=True)
-# double_dqn_actions = discretized_actions[double_dqn_actions_indices.astype(int)]
+double_dqn_actions_indices, double_dqn_test_losses = train_test_dqn(train=training, dueling=False, double=True)
+double_dqn_actions = discretized_actions[double_dqn_actions_indices.astype(int)]
 
-# dueling_dqn_actions_indices, dueling_dqn_test_losses = train_test_dqn(train=training, dueling=True, double=False)
-# dueling_dqn_actions = discretized_actions[dueling_dqn_actions_indices.astype(int)]
+dueling_dqn_actions_indices, dueling_dqn_test_losses = train_test_dqn(train=training, dueling=True, double=False)
+dueling_dqn_actions = discretized_actions[dueling_dqn_actions_indices.astype(int)]
 
-# dueling_double_dqn_actions_indices, dueling_double_dqn_test_losses = train_test_dqn(train=training, dueling=True, double=True)
-# dueling_double_dqn_actions = discretized_actions[dueling_double_dqn_actions_indices.astype(int)]
+dueling_double_dqn_actions_indices, dueling_double_dqn_test_losses = train_test_dqn(train=training, dueling=True, double=True)
+dueling_double_dqn_actions = discretized_actions[dueling_double_dqn_actions_indices.astype(int)]
 
-# ppo_actions, ppo_test_losses = train_test_ppo(train=training)
+ppo_actions, ppo_test_losses = train_test_ppo(train=training)
 
-# ddpg_actions, ddpg_test_losses = train_test_ddpg(train=training)
+ddpg_actions, ddpg_test_losses = train_test_ddpg(train=training)
 
-# td_ddpg_actions, td_ddpg_test_losses = train_test_ddpg(train=training, twin_delayed=True)
+td_ddpg_actions, td_ddpg_test_losses = train_test_ddpg(train=training, twin_delayed=True)
 
 
 
@@ -954,7 +954,7 @@ training = True
 
 
 
-tune_dqn()
+# tune_dqn()
 # tune_ddpg()
 # tune_ppo()
 
