@@ -35,7 +35,7 @@ dueling=True
 T = 252/252
 
 cpu = True
-num_cpus = 60
+num_cpus = 24
 cpus = 1
 num_gpus = 1
 gpus = 0.05
