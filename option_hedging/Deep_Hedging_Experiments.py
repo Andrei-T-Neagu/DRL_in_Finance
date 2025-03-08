@@ -892,25 +892,25 @@ discretized_actions = np.arange(start=0.0, stop=1.02, step=0.02)
 
 training = True
 
-# pg_actions, pg_test_losses = train_test_pg(train=training)
+pg_actions, pg_test_losses = train_test_pg(train=training)
 
-# dqn_actions_indices, dqn_test_losses = train_test_dqn(train=training, dueling=False, double=False)
-# dqn_actions = discretized_actions[dqn_actions_indices.astype(int)]
+dqn_actions_indices, dqn_test_losses = train_test_dqn(train=training, dueling=False, double=False)
+dqn_actions = discretized_actions[dqn_actions_indices.astype(int)]
 
-# double_dqn_actions_indices, double_dqn_test_losses = train_test_dqn(train=training, dueling=False, double=True)
-# double_dqn_actions = discretized_actions[double_dqn_actions_indices.astype(int)]
+double_dqn_actions_indices, double_dqn_test_losses = train_test_dqn(train=training, dueling=False, double=True)
+double_dqn_actions = discretized_actions[double_dqn_actions_indices.astype(int)]
 
-# dueling_dqn_actions_indices, dueling_dqn_test_losses = train_test_dqn(train=training, dueling=True, double=False)
-# dueling_dqn_actions = discretized_actions[dueling_dqn_actions_indices.astype(int)]
+dueling_dqn_actions_indices, dueling_dqn_test_losses = train_test_dqn(train=training, dueling=True, double=False)
+dueling_dqn_actions = discretized_actions[dueling_dqn_actions_indices.astype(int)]
 
-# dueling_double_dqn_actions_indices, dueling_double_dqn_test_losses = train_test_dqn(train=training, dueling=True, double=True)
-# dueling_double_dqn_actions = discretized_actions[dueling_double_dqn_actions_indices.astype(int)]
+dueling_double_dqn_actions_indices, dueling_double_dqn_test_losses = train_test_dqn(train=training, dueling=True, double=True)
+dueling_double_dqn_actions = discretized_actions[dueling_double_dqn_actions_indices.astype(int)]
 
 ppo_actions, ppo_test_losses = train_test_ppo(train=training)
 
-# ddpg_actions, ddpg_test_losses = train_test_ddpg(train=training)
+ddpg_actions, ddpg_test_losses = train_test_ddpg(train=training)
 
-# td_ddpg_actions, td_ddpg_test_losses = train_test_ddpg(train=training, twin_delayed=True)
+td_ddpg_actions, td_ddpg_test_losses = train_test_ddpg(train=training, twin_delayed=True)
 
 
 

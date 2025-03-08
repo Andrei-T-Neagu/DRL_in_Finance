@@ -216,6 +216,7 @@ class DDPG:
                 episode_val_loss.append(val_rsmse)
                 if val_rsmse < best_val_loss and path:
                     self.save(path + "best_ddpg_model.pth")
+                    best_val_loss = val_rsmse
 
             if render and e % 10000 == 0:
                 print(f"Episode {e}/{episodes-1}, Validation Loss: {val_rsmse}")

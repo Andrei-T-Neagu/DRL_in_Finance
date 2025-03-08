@@ -143,6 +143,7 @@ class PG:
                 episode_val_loss.append(val_rsmse)
                 if val_rsmse < best_val_loss and path:
                     self.save(path + "best_pg_model.pth")
+                    best_val_loss = val_rsmse
 
             if render and e % 1000 == 0:
                 print(f"Episode {e}/{episodes-1}, Validation RSMSE: {val_rsmse}")

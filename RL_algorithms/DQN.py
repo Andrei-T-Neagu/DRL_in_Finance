@@ -169,6 +169,7 @@ class DoubleDQN:
                 episode_val_loss.append(val_rsmse)
                 if val_rsmse < best_val_loss and path:
                     self.save(path + "best_dqn_model.pth")
+                    best_val_loss = val_rsmse
 
             # decay epsilon
             if self.epsilon > self.epsilon_min:
