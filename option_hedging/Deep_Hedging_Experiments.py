@@ -890,48 +890,48 @@ def plot_ppo_losses():
 """Get actions from all models"""
 discretized_actions = np.arange(start=0.0, stop=1.02, step=0.02)
 
-training = True
+training = False
 
-pg_actions, pg_test_losses = train_test_pg(train=training)
+# pg_actions, pg_test_losses = train_test_pg(train=training)
 
-dqn_actions_indices, dqn_test_losses = train_test_dqn(train=training, dueling=False, double=False)
-dqn_actions = discretized_actions[dqn_actions_indices.astype(int)]
+# dqn_actions_indices, dqn_test_losses = train_test_dqn(train=training, dueling=False, double=False)
+# dqn_actions = discretized_actions[dqn_actions_indices.astype(int)]
 
-double_dqn_actions_indices, double_dqn_test_losses = train_test_dqn(train=training, dueling=False, double=True)
-double_dqn_actions = discretized_actions[double_dqn_actions_indices.astype(int)]
+# double_dqn_actions_indices, double_dqn_test_losses = train_test_dqn(train=training, dueling=False, double=True)
+# double_dqn_actions = discretized_actions[double_dqn_actions_indices.astype(int)]
 
-dueling_dqn_actions_indices, dueling_dqn_test_losses = train_test_dqn(train=training, dueling=True, double=False)
-dueling_dqn_actions = discretized_actions[dueling_dqn_actions_indices.astype(int)]
+# dueling_dqn_actions_indices, dueling_dqn_test_losses = train_test_dqn(train=training, dueling=True, double=False)
+# dueling_dqn_actions = discretized_actions[dueling_dqn_actions_indices.astype(int)]
 
-dueling_double_dqn_actions_indices, dueling_double_dqn_test_losses = train_test_dqn(train=training, dueling=True, double=True)
-dueling_double_dqn_actions = discretized_actions[dueling_double_dqn_actions_indices.astype(int)]
+# dueling_double_dqn_actions_indices, dueling_double_dqn_test_losses = train_test_dqn(train=training, dueling=True, double=True)
+# dueling_double_dqn_actions = discretized_actions[dueling_double_dqn_actions_indices.astype(int)]
 
-ppo_actions, ppo_test_losses = train_test_ppo(train=training)
+# ppo_actions, ppo_test_losses = train_test_ppo(train=training)
 
-ddpg_actions, ddpg_test_losses = train_test_ddpg(train=training)
+# ddpg_actions, ddpg_test_losses = train_test_ddpg(train=training)
 
-td_ddpg_actions, td_ddpg_test_losses = train_test_ddpg(train=training, twin_delayed=True)
+# td_ddpg_actions, td_ddpg_test_losses = train_test_ddpg(train=training, twin_delayed=True)
 
 
 
-# all_algorithms_test_losses = [pg_test_losses, bs_rsmse_list, ppo_test_losses, dueling_dqn_test_losses, td_ddpg_test_losses, ddpg_test_losses, dueling_double_dqn_test_losses, dqn_test_losses, double_dqn_test_losses]
+# all_algorithms_test_losses = [pg_test_losses, bs_rsmse_list, ppo_test_losses, td_ddpg_test_losses, dqn_test_losses, ddpg_test_losses, dueling_dqn_test_losses, dueling_double_dqn_test_losses, double_dqn_test_losses]
 
 # with open(global_path_prefix + "option_hedging/all_test_losses.pickle", 'wb') as file:
 #     pickle.dump(all_algorithms_test_losses, file)
 # with open(global_path_prefix + "option_hedging/all_test_losses.pickle", "rb") as file:
 #     all_algorithms_test_losses = pickle.load(file)
 
-# all_algorithms_names = ["PG", "B-S DH", "PPO", "Dueling DQL",  "TD3", "DDPG", "Dueling Double DQL", "DQL", "Double DQL"]
+all_algorithms_names = ["MCPG", "B-S DH", "PPO", "TD3", "DQL", "DDPG", "Dueling DQL", "Dueling Double DQL", "Double DQL"]
 
-# top_row = "||"
+# top_row = "{:21s}|".format("")
 # for name in all_algorithms_names:
 #     top_row += "{:20s}|".format(name)
 # print(top_row)
 # for i, test_losses_i in enumerate(all_algorithms_test_losses):
-#     current_row = "{:20s} & ".format(all_algorithms_names[i])
+#     current_row = "{:20s} | ".format(all_algorithms_names[i])
 #     for j, test_losses_j in enumerate(all_algorithms_test_losses):
 #         p_value = ttest_ind(test_losses_i, test_losses_j, equal_var=False, alternative="less").pvalue
-#         current_row += "{:.2f} & ".format(p_value)
+#         current_row += "{:14s}{:.2f} | ".format("", p_value)
 #     print(current_row)
 
 # model_actions = np.stack([pg_actions, dqn_actions, double_dqn_actions, dueling_dqn_actions, dueling_double_dqn_actions, ppo_actions, ddpg_actions, td_ddpg_actions])
@@ -939,13 +939,13 @@ td_ddpg_actions, td_ddpg_test_losses = train_test_ddpg(train=training, twin_dela
 # with open(global_path_prefix + "option_hedging/model_actions.pickle", 'wb') as file:
 #     pickle.dump(model_actions, file)
 
-# with open(global_path_prefix + "option_hedging/model_actions.pickle", "rb") as file:
-#     model_actions = pickle.load(file)
+with open(global_path_prefix + "option_hedging/model_actions.pickle", "rb") as file:
+    model_actions = pickle.load(file)
 
-# model_actions = np.stack([model_actions[0,:,:], model_actions[3,:,:], model_actions[5,:,:], model_actions[7,:,:]])
-# model_labels = ["PG", "Dueling DQL", "PPO", "TD3"]
+model_actions = np.stack([model_actions[0,:,:], model_actions[1,:,:], model_actions[5,:,:], model_actions[7,:,:]])
+model_labels = ["MCPG", "DQL", "PPO", "TD3"]
 
-# plot_actions(test_set_DH[:,0], bs_actions[:,0], model_actions[:,:,0], model_labels)
+plot_actions(test_set_DH[:,0], bs_actions[:,0], model_actions[:,:,0], model_labels)
 # plot_ppo_losses()
 
 
