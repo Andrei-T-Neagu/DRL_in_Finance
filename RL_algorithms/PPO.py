@@ -46,6 +46,7 @@ class PPO:
         # Sample from Gaussian distribution
         dist = torch.distributions.Normal(mean, std)
         action = dist.sample()
+        action = torch.clamp(action, 0.0, 1.0)
         action_log_prob = dist.log_prob(action)
         # print("mean: ", mean)
         # print("std: ", std)
@@ -220,7 +221,7 @@ class PPO:
                     mean_log_std = self.policy(state)
                     mean, log_std = torch.chunk(mean_log_std, 2, dim=-1)
                     
-                    action = mean
+                    action = torch.clamp(mean, 0.0, 1.0)
 
                 # Step the environment with the chosen action
                 next_state, reward, done = env.step(action)

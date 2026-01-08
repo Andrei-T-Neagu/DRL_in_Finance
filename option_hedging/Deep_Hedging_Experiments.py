@@ -31,7 +31,7 @@ episodes = 500000
 trans_costs = 0.00              #proportional transaction costs 0.0 or 0.01
 twin_delayed=False
 double=False
-dueling=True
+dueling=False
 T = 252/252
 
 cpu = False
@@ -955,8 +955,8 @@ plot_actions(test_set_DH[:,0], bs_actions[:,0], model_actions[:,:,0], model_labe
 
 
 # tune_dqn()
-# tune_ddpg()
-# tune_ppo()
+tune_ddpg()
+tune_ppo()
 
 
 
