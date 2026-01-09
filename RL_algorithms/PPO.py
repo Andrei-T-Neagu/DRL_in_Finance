@@ -43,6 +43,7 @@ class PPO:
         # print("mean_log_std: ", mean_log_std)
         mean, log_std = torch.chunk(mean_log_std, 2, dim=-1)
         std = torch.exp(log_std)
+        std = torch.clamp(std, min=1e-6)
         # Sample from Gaussian distribution
         dist = torch.distributions.Normal(mean, std)
         action = dist.sample()
