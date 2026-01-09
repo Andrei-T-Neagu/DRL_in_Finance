@@ -138,6 +138,7 @@ class PPO:
                 mean_log_std = self.policy(states)
                 mean, log_std = torch.chunk(mean_log_std, 2, dim=-1)
                 std = torch.exp(log_std)
+                std = torch.clamp(std, min=1e-6)
                 dist = torch.distributions.Normal(mean, std)
                 new_log_probs = dist.log_prob(actions)
                 dist_entropy = dist.entropy().mean()
