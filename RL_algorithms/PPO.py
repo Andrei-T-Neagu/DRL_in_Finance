@@ -43,7 +43,7 @@ class PPO:
         # print("mean_log_std: ", mean_log_std)
         mean, log_std = torch.chunk(mean_log_std, 2, dim=-1)
         std = torch.exp(log_std)
-        std = torch.clamp(std, min=1e-6)
+        std = torch.clamp(std, min=1e-8)
         # Sample from Gaussian distribution
         dist = torch.distributions.Normal(mean, std)
         action = dist.sample()
@@ -76,7 +76,7 @@ class PPO:
         
         if normalize:
             
-            advantages = (advantages - advantages.mean()) / advantages.std()
+            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
             
         return advantages
 
@@ -222,8 +222,8 @@ class PPO:
                 with torch.no_grad():
                     mean_log_std = self.policy(state)
                     mean, log_std = torch.chunk(mean_log_std, 2, dim=-1)
-                    
-                    action = torch.clamp(mean, 0.0, 1.0)
+                    action = mean
+                    action = torch.clamp(action, 0.0, 1.0)
 
                 # Step the environment with the chosen action
                 next_state, reward, done = env.step(action)
