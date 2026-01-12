@@ -39,7 +39,7 @@ class FFNN(nn.Module):
         else:
             x = self.final_linear(x)
             if self.log_predicted:
-                x = torch.clamp(x, -10, 2)
+                x = torch.clamp(x, -5, 2)
             if self.policy:
                 x = torch.clamp(x, 0.0, 1.0)
             if self.value:
