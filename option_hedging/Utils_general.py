@@ -174,7 +174,7 @@ def hedging_stats(hedging_err, deltas):
 
 def turnover_func(deltas):
     # The mean is taken with respect to the number of time-steps (to compare across different maturities)
-    turnover = np.mean(np.sum(np.absolute(deltas[1:, :, :] - deltas[0:-1, :, :]), axis=0), axis=0)
+    turnover = np.mean(np.sum(np.absolute(deltas[1:, :, :] - deltas[0:-1, :, :]), axis=0), axis=0).item()
     return (turnover)
 
 
