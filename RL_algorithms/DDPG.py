@@ -110,8 +110,7 @@ class DDPG:
             target_actions = self.target_policy(next_states) 
             if self.twin_delayed:
                 noise = torch.randn(target_actions.shape, device=self.device) * self.epsilon
-                clipped_noise = torch.clamp(noise, -0.5, 0.5)
-                target_actions = torch.clamp(target_actions + clipped_noise, -0.5, 2.0)
+                target_actions = torch.clamp(target_actions + noise, 0.0, 1.0)
             target_q_values = self.target_value(torch.cat([next_states, target_actions], dim=1))
             if self.twin_delayed:
                 target_q_values2 = self.target_value2(torch.cat([next_states, target_actions], dim=1))

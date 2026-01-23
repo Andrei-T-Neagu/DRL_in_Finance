@@ -35,10 +35,10 @@ dueling=False
 T = 252/252
 
 cpu = False
-num_cpus = 24
+num_cpus = 32
 cpus = 1
-num_gpus = 1
-gpus = 0.05
+num_gpus = 2
+gpus = 0.04
 subprocess.Popen("nvidia-smi")
 
 global_path_prefix = os.getcwd()+"/"
@@ -955,8 +955,8 @@ plot_actions(test_set_DH[:,0], bs_actions[:,0], model_actions[:,:,0], model_labe
 
 
 # tune_dqn()
-tune_ppo()
-# tune_ddpg()
+# tune_ppo()
+tune_ddpg()
 
 
 
