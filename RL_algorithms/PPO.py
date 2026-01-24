@@ -42,18 +42,19 @@ class PPO:
         mean_log_std = self.policy(state)
         # print("mean_log_std: ", mean_log_std)
         mean, log_std = torch.chunk(mean_log_std, 2, dim=-1)
+        log_std = torch.clamp(log_std, -4, 1)
         std = torch.exp(log_std)
-        std = torch.clamp(std, min=1e-6)
         # Sample from Gaussian distribution
         dist = torch.distributions.Normal(mean, std)
-        action = dist.sample()
-        action = torch.clamp(action, 0.0, 1.0)
-        action_log_prob = dist.log_prob(action)
+        raw_action = dist.rsample()
+        action = torch.sigmoid(raw_action)
+        action_log_prob = dist.log_prob(raw_action) - torch.log(action * (1 - action) + 1e-6)
+        
         # print("mean: ", mean)
         # print("std: ", std)
         # print("action_log_prob: ", action_log_prob)
         entropy = dist.entropy().mean()
-        return action, action_log_prob, entropy
+        return action, raw_action, action_log_prob, entropy
 
     def calculate_returns(self, rewards, normalize = False):
     
@@ -112,12 +113,12 @@ class PPO:
             step = 0
             while torch.all(done == 0):
                 with torch.no_grad():
-                    action, action_log_prob, _ = self.get_action(state)
+                    action, raw_action, action_log_prob, _ = self.get_action(state)
                     value = self.value(state).flatten()
 
                     next_state, reward, done = env.step(action)
                     rewards[:, step] = -torch.square(torch.where(reward > 0, reward, -0))
-                    actions[:, step, :] = action
+                    actions[:, step, :] = raw_action
                     states[:, step, :] = state
                     log_probs[:, step, :] = action_log_prob
                     dones[:, step] = done
@@ -137,10 +138,10 @@ class PPO:
                 
                 mean_log_std = self.policy(states)
                 mean, log_std = torch.chunk(mean_log_std, 2, dim=-1)
+                log_std = torch.clamp(log_std, -4, 1)
                 std = torch.exp(log_std)
-                std = torch.clamp(std, min=1e-6)
                 dist = torch.distributions.Normal(mean, std)
-                new_log_probs = dist.log_prob(actions)
+                new_log_probs = dist.log_prob(actions) - torch.log(torch.sigmoid(actions) * (1 - torch.sigmoid(actions)) + 1e-6)
                 dist_entropy = dist.entropy().mean()
                 ratio = torch.exp(new_log_probs - log_probs).squeeze()
 
@@ -222,8 +223,7 @@ class PPO:
                 with torch.no_grad():
                     mean_log_std = self.policy(state)
                     mean, log_std = torch.chunk(mean_log_std, 2, dim=-1)
-                    action = mean
-                    action = torch.clamp(action, 0.0, 1.0)
+                    action = torch.sigmoid(mean)
 
                 # Step the environment with the chosen action
                 next_state, reward, done = env.step(action)
