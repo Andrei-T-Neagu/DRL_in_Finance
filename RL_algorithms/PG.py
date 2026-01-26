@@ -119,7 +119,7 @@ class PG:
 
             while torch.all(done == 0):
                 action = self.model(state)
-
+                action = torch.clamp(action, 0, 1)
                 next_state, reward, done = env.step(action)
 
                 state = next_state
@@ -188,6 +188,7 @@ class PG:
                 # Get the action from the trained model (greedy policy, no epsilon-greedy)
                 with torch.no_grad():
                     action = self.model(state)
+                    action = torch.clamp(action, 0, 1)
                 # Step the environment with the chosen action
                 next_state, reward, done = env.step(action)
                 # Store action
