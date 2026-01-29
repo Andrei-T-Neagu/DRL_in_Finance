@@ -29,8 +29,8 @@ class DDPG:
 
         self.device = device
         # Policy network
-        self.policy = FFNN(state_size, action_size, self.num_layers, self.hidden_size, policy=True).to(self.device)
-        self.target_policy = FFNN(state_size, action_size, self.num_layers, self.hidden_size, policy=True).to(self.device)
+        self.policy = FFNN(state_size, action_size, self.num_layers, self.hidden_size).to(self.device)
+        self.target_policy = FFNN(state_size, action_size, self.num_layers, self.hidden_size).to(self.device)
         
         # Value network
         self.value = FFNN(state_size + 1, 1, self.num_layers, self.hidden_size, value=False).to(self.device)
@@ -84,7 +84,7 @@ class DDPG:
 
     def get_action(self, state):
         # Predict mean and log_std
-        action = self.policy(state)
+        action = torch.sigmoid(self.policy(state))
         action = action + torch.randn(action.shape, device=self.device) * self.epsilon
         action = torch.clamp(action, 0.0, 1.0)
         return action
@@ -107,7 +107,8 @@ class DDPG:
         dones = torch.vstack(dones)
     
         with torch.no_grad():
-            target_actions = self.target_policy(next_states) 
+            target_actions = self.target_policy(next_states)
+            target_actions = torch.sigmoid(target_actions)
             if self.twin_delayed:
                 noise = torch.randn(target_actions.shape, device=self.device) * self.epsilon
                 target_actions = torch.clamp(target_actions + noise, 0.0, 1.0)
@@ -184,7 +185,7 @@ class DDPG:
 
                 with torch.no_grad():
                     action = self.get_action(state)
-
+                    
                 next_state, reward, done = env.step(action)
 
                 reward = -torch.square(torch.where(reward > 0, reward, -0))
@@ -261,8 +262,7 @@ class DDPG:
 
                 # Get the action from the trained model
                 with torch.no_grad():
-                    action = self.policy(state)
-
+                    action = torch.sigmoid(self.policy(state))
                 # Step the environment with the chosen action
                 next_state, reward, done = env.step(action)
                 # Store action

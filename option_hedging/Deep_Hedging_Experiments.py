@@ -34,10 +34,10 @@ double=False
 dueling=False
 T = 252/252
 
-cpu = False
+cpu = True
 num_cpus = 32
 cpus = 1
-num_gpus = 2
+num_gpus = 0
 gpus = 0.04
 subprocess.Popen("nvidia-smi")
 
@@ -955,7 +955,7 @@ plot_actions(test_set_DH[:,0], bs_actions[:,0], model_actions[:,:,0], model_labe
 
 
 # tune_dqn()
-tune_pg()
+tune_ddpg()
 
 
 
@@ -987,3 +987,4 @@ tune_pg()
 
 # total_time_taken = str(datetime.datetime.now() - start_total_time)
 # print("TOTAL TIME TAKEN: ", total_time_taken)
+
