@@ -29,7 +29,7 @@ from scipy.stats import ttest_ind
 start_total_time = datetime.datetime.now()
 episodes = 200000
 trans_costs = 0.00              #proportional transaction costs 0.0 or 0.01
-twin_delayed=False
+twin_delayed=True
 double=False
 dueling=False
 T = 252/252
@@ -977,7 +977,6 @@ tune_ddpg()
 
 # print(" ----------------- ")
 # print("Leland Delta Hedging Results")
-# print(" ----------------- ")
 # deltas_DH_leland, hedging_err_DH_leland = Utils_general.delta_hedge_res(test_set_BS, r_borrow, r_lend, params_vect[1], T, option_type=option_type, position_type=position_type, strike=strike, V_0=V_0,
 #                                                                         nbs_shares=nbs_shares, trans_costs=trans_costs, Leland=True)
 # Utils_general.print_stats(hedging_err_DH_leland, deltas_DH_leland, "Leland delta hedge", "Leland delta hedge", V_0)
@@ -987,4 +986,3 @@ tune_ddpg()
 
 # total_time_taken = str(datetime.datetime.now() - start_total_time)
 # print("TOTAL TIME TAKEN: ", total_time_taken)
-

@@ -170,7 +170,7 @@ class DDPG:
                 self.value2_scheduler = lr_scheduler.LinearLR(self.value2_optimizer, start_factor=1.0, end_factor=0.0, total_iters=episodes)
             self.policy_scheduler = lr_scheduler.LinearLR(self.policy_optimizer, start_factor=1.0, end_factor=0.0, total_iters=episodes)
 
-        self.epsilon = 0.5
+        self.epsilon = 0.2
         epsilon_decay = self.epsilon/(episodes+1)
 
         print("TRAINING DDPG: ")
