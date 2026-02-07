@@ -25,7 +25,7 @@ class PG:
     Returns:
     - None
     """
-    def __init__(self, config, state_size, action_size, gamma = 1.0, device='cpu'):
+    def __init__(self, config, state_size, action_size, gamma = 0.99, device='cpu'):
         self.state_size = state_size
         self.action_size = action_size
 
@@ -111,7 +111,7 @@ class PG:
         for e in range(episodes):
             state = env.reset(self.batch_size)
 
-            done = torch.zeros(self.batch_size)
+            done = torch.zeros(self.batch_size, device=self.device)
 
             total_reward = torch.zeros(self.batch_size, device=self.device)
 
@@ -130,6 +130,7 @@ class PG:
             
             self.optimizer.zero_grad()
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
             self.optimizer.step()
             
             if lr_schedule:
@@ -179,7 +180,7 @@ class PG:
 
         for batch in range(batches):
             state = env.reset(self.batch_size)  # Initialize the environment and get the initial state
-            done = torch.zeros(self.batch_size)
+            done = torch.zeros(self.batch_size, device=self.device)
             total_reward = torch.zeros(self.batch_size, device=self.device)
 
             i = 0

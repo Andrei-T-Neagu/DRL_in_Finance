@@ -3,12 +3,11 @@ import torch.nn as nn
 
 class FFNN(nn.Module):
     
-    def __init__(self, in_features, out_features, num_layers, hidden_size, dueling=False, log_predicted=False, policy=False, value=False, dropout=0.0):
+    def __init__(self, in_features, out_features, num_layers, hidden_size, dueling=False, policy=False, value=False, dropout=0.0):
         
         super().__init__()
         self.num_layers = num_layers
         self.dueling = dueling
-        self.log_predicted = log_predicted
         self.policy = policy
         self.value = value
         self.linear1 = nn.Linear(in_features=in_features, out_features=hidden_size)

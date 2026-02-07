@@ -10,10 +10,10 @@ import torch.optim.lr_scheduler as lr_scheduler
 
 # Double DQN agent
 class DoubleDQN:
-    def __init__(self, config, state_size, action_size, epsilon=1.0, epsilon_min=0.05, target_update=1, tau=0.1, double=True, dueling=False, device='cpu'):
+    def __init__(self, config, state_size, action_size, epsilon=1.0, epsilon_min=0.05, target_update=1000, tau=0.1, double=True, dueling=False, device='cpu'):
         self.state_size = state_size
         self.action_size = action_size
-        self.gamma = 1.0                        # discount factor
+        self.gamma = 0.99                        # discount factor
         self.epsilon = epsilon                  # epsilon from epsilon-greedy action selection (random action taken with probability epsilon)
         self.epsilon_min = epsilon_min          # minimum value for epsilon
 
@@ -105,6 +105,7 @@ class DoubleDQN:
         # perform update step
         self.optimizer.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
         self.optimizer.step()
 
     # load the model
@@ -126,7 +127,7 @@ class DoubleDQN:
         episode_val_loss = []
         best_val_loss = 9999
 
-        self.epsilon_decay = (episodes-10)/episodes
+        epsilon_decay = self.epsilon/(episodes+1)
 
         if lr_schedule:
             self.scheduler = lr_scheduler.LinearLR(self.optimizer, start_factor=1.0, end_factor=0.0, total_iters=episodes)
@@ -156,7 +157,7 @@ class DoubleDQN:
 
                 self.replay()
 
-            if self.double and e % self.target_update == 0:
+            if e % self.target_update == 0:
                 self.update_target_model()
             
             if lr_schedule and len(self.memory) > self.batch_size:
@@ -173,7 +174,7 @@ class DoubleDQN:
 
             # decay epsilon
             if self.epsilon > self.epsilon_min:
-                self.epsilon *= self.epsilon_decay
+                self.epsilon -= epsilon_decay
         
             if render and e % 10000 == 0:
                 print(f"Episode {e}/{episodes-1}, Validation RSMSE: {val_rsmse}")
@@ -218,7 +219,7 @@ class DoubleDQN:
                 # Get the action from the trained model (greedy policy, no epsilon-greedy)
                 with torch.no_grad():
                     q_values = self.model(state)
-                    action = torch.argmax(q_values, dim=1)
+                    action = torch.argmax(q_values, dim=1, keepdim=True)
 
                 # Step the environment with the chosen action
                 next_state, reward, done = env.step(action)

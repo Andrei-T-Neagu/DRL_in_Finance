@@ -25,7 +25,8 @@ class DeepHedgingEnvironment():
         self.nbs_shares = nbs_shares
         self.N = self.nbs_point_traj - 1   # number of time-steps
         self.dt = self.T / self.N       # time_step size
-
+        self.loss_type = "RSMSE" 
+        
         self.strike = strike
         self.light = light
         self.trans_costs = trans_costs

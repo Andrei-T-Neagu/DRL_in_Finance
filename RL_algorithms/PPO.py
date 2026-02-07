@@ -14,7 +14,7 @@ class PPO:
         self.num_layers = config.get("num_layers")
         self.hidden_size = config.get("hidden_size")
         
-        self.gamma = 1.0                                            # discount factor
+        self.gamma = 0.99                                           # discount factor
         self.state_size = state_size            
         self.action_size = action_size                 
         self.clip_eps = clip_eps                # clipping factor of the gradient estimate
@@ -131,7 +131,7 @@ class PPO:
             returns = self.calculate_returns(rewards).to(self.device)
             advantages = self.calculate_advantages(returns, values)
 
-            # Training using mini-batches and multiple epochs
+            # Training using multiple epochs
             for _ in range(self.epochs):
 
                 # Get new log probabilities
@@ -157,12 +157,14 @@ class PPO:
                 # surrogate_loss = loss_policy + 0.5 * loss_value + 0.01 * dist_entropy
 
                 # Update the networks
-                self.value_optimizer.zero_grad()
                 loss_value.backward()
+                torch.nn.utils.clip_grad_norm_(self.value.parameters(), max_norm=1.0)
                 self.value_optimizer.step()
-                self.policy_optimizer.zero_grad()
+                self.value_optimizer.zero_grad()
                 loss_policy.backward()
+                torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=1.0)
                 self.policy_optimizer.step()
+                self.policy_optimizer.zero_grad()
             
             if lr_schedule:
                 self.value_scheduler.step()

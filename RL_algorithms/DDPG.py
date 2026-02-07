@@ -13,13 +13,14 @@ class DDPG:
         self.state_size = state_size            
         self.action_size = action_size
         
-        self.gamma = 1.0                                           # discount factor
+        self.gamma = 0.99                                           # discount factor
         
         self.lr = config.get("lr", 0.0001)                          # learning rate
         self.batch_size = config.get("batch_size", 128)             # batch size
         self.num_layers = config.get("num_layers")
         self.hidden_size = config.get("hidden_size")
         
+        self.critic_updates = 0
         self.twin_delayed = twin_delayed
         self.target_update = 2 if self.twin_delayed else 1          # Frequency at which target model is updated
         self.tau = 0.1
@@ -33,8 +34,8 @@ class DDPG:
         self.target_policy = FFNN(state_size, action_size, self.num_layers, self.hidden_size).to(self.device)
         
         # Value network
-        self.value = FFNN(state_size + 1, 1, self.num_layers, self.hidden_size, value=False).to(self.device)
-        self.target_value = FFNN(state_size + 1, 1, self.num_layers, self.hidden_size, value=False).to(self.device)
+        self.value = FFNN(state_size + action_size, 1, self.num_layers, self.hidden_size, value=False).to(self.device)
+        self.target_value = FFNN(state_size + action_size, 1, self.num_layers, self.hidden_size, value=False).to(self.device)
 
         self.policy.apply(self.init_weights)
         self.value.apply(self.init_weights)
@@ -84,13 +85,13 @@ class DDPG:
 
     def get_action(self, state):
         # Predict mean and log_std
-        action = torch.sigmoid(self.policy(state))
-        action = action + torch.randn(action.shape, device=self.device) * self.epsilon
-        action = torch.clamp(action, 0.0, 1.0)
+        raw_action = self.policy(state)
+        raw_action = raw_action + torch.randn(raw_action.shape, device=self.device) * self.epsilon
+        action = torch.sigmoid(raw_action, 0.0, 1.0)
         return action
 
     # perform an update based on a mini batch sampled from the replay memory buffer
-    def replay(self, e):
+    def replay(self):
         # do not perform an update if the replay memory buffer isn't filled enough to sample a batch
         if len(self.memory) < self.batch_size:
             return
@@ -111,7 +112,7 @@ class DDPG:
             target_actions = torch.sigmoid(target_actions)
             if self.twin_delayed:
                 noise = torch.randn(target_actions.shape, device=self.device) * self.epsilon
-                target_actions = torch.clamp(target_actions + noise, 0.0, 1.0)
+                target_actions = torch.sigmoid(target_actions + noise)
             target_q_values = self.target_value(torch.cat([next_states, target_actions], dim=1))
             if self.twin_delayed:
                 target_q_values2 = self.target_value2(torch.cat([next_states, target_actions], dim=1))
@@ -131,25 +132,30 @@ class DDPG:
         # perform update step on value function
         self.value_optimizer.zero_grad()
         value_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.value.parameters(), max_norm=1.0)
         self.value_optimizer.step()
+        self.critic_updates += 1
 
         if self.twin_delayed:
             self.value2_optimizer.zero_grad()
             value2_loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.value2.parameters(), max_norm=1.0)
             self.value2_optimizer.step()
         
         if self.twin_delayed:
-            if e % 2 == 0:
+            if self.critic_updates % 2 == 0:
                 # policy update
                 policy_loss = -self.value(torch.cat([states, self.policy(states)], dim=1)).mean()
                 self.policy_optimizer.zero_grad()
                 policy_loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=1.0)
                 self.policy_optimizer.step()
         else:
             # policy update
                 policy_loss = -self.value(torch.cat([states, self.policy(states)], dim=1)).mean()
                 self.policy_optimizer.zero_grad()
                 policy_loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=1.0)
                 self.policy_optimizer.step()
                 
     def train(self, env, val_env, BS_rsmse, episodes=1000, lr_schedule = True, render=False, path=None):
@@ -196,7 +202,7 @@ class DDPG:
 
                 total_reward += reward
 
-                self.replay(e)
+                self.replay()
 
             if e % self.target_update == 0:
                 self.update_target_models()
