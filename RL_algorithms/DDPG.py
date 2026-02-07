@@ -84,8 +84,8 @@ class DDPG:
 
     def get_action(self, state):
         # Predict mean and log_std
-        action = self.policy(state)
-        action = torch.sigmoid(action) + torch.randn(action.shape, device=self.device) * self.epsilon
+        action = torch.sigmoid(self.policy(state))
+        action = action + torch.randn(action.shape, device=self.device) * self.epsilon
         action = torch.clamp(action, 0.0, 1.0)
         return action
 
@@ -170,7 +170,7 @@ class DDPG:
                 self.value2_scheduler = lr_scheduler.LinearLR(self.value2_optimizer, start_factor=1.0, end_factor=0.0, total_iters=episodes)
             self.policy_scheduler = lr_scheduler.LinearLR(self.policy_optimizer, start_factor=1.0, end_factor=0.0, total_iters=episodes)
 
-        self.epsilon = 0.5
+        self.epsilon = 0.2
         epsilon_decay = self.epsilon/(episodes+1)
 
         print("TRAINING DDPG: ")
@@ -185,7 +185,7 @@ class DDPG:
 
                 with torch.no_grad():
                     action = self.get_action(state)
-
+                    
                 next_state, reward, done = env.step(action)
 
                 reward = -torch.square(torch.where(reward > 0, reward, -0))
