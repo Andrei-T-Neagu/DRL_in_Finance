@@ -87,7 +87,7 @@ class DDPG:
         # Predict mean and log_std
         raw_action = self.policy(state)
         raw_action = raw_action + torch.randn(raw_action.shape, device=self.device) * self.epsilon
-        action = torch.sigmoid(raw_action, 0.0, 1.0)
+        action = torch.sigmoid(raw_action)
         return action
 
     # perform an update based on a mini batch sampled from the replay memory buffer
