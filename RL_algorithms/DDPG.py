@@ -47,10 +47,10 @@ class DDPG:
         self.target_value.load_state_dict(self.value.state_dict())
 
         if self.twin_delayed:
-            self.value2 = FFNN(state_size + 1, 1, self.num_layers, self.hidden_size, value=False).to(self.device)
+            self.value2 = FFNN(state_size + action_size, 1, self.num_layers, self.hidden_size, value=False).to(self.device)
             self.value2.apply(self.init_weights)
             self.value2_optimizer = optim.Adam(self.value2.parameters(), self.lr)
-            self.target_value2 = FFNN(state_size + 1, 1, self.num_layers, self.hidden_size, value=False).to(self.device)
+            self.target_value2 = FFNN(state_size + action_size, 1, self.num_layers, self.hidden_size, value=False).to(self.device)
             self.target_value2.load_state_dict(self.value2.state_dict())
 
     def init_weights(self, m):
@@ -109,10 +109,10 @@ class DDPG:
     
         with torch.no_grad():
             target_actions = self.target_policy(next_states)
-            target_actions = torch.sigmoid(target_actions)
             if self.twin_delayed:
                 noise = torch.randn(target_actions.shape, device=self.device) * self.epsilon
-                target_actions = torch.sigmoid(target_actions + noise)
+                target_actions = target_actions + noise
+            target_actions = torch.sigmoid(target_actions)
             target_q_values = self.target_value(torch.cat([next_states, target_actions], dim=1))
             if self.twin_delayed:
                 target_q_values2 = self.target_value2(torch.cat([next_states, target_actions], dim=1))
@@ -145,14 +145,14 @@ class DDPG:
         if self.twin_delayed:
             if self.critic_updates % 2 == 0:
                 # policy update
-                policy_loss = -self.value(torch.cat([states, self.policy(states)], dim=1)).mean()
+                policy_loss = -self.value(torch.cat([states, torch.sigmoid(self.policy(states))], dim=1)).mean()
                 self.policy_optimizer.zero_grad()
                 policy_loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=1.0)
                 self.policy_optimizer.step()
         else:
             # policy update
-                policy_loss = -self.value(torch.cat([states, self.policy(states)], dim=1)).mean()
+                policy_loss = -self.value(torch.cat([states, torch.sigmoid(self.policy(states))], dim=1)).mean()
                 self.policy_optimizer.zero_grad()
                 policy_loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=1.0)
