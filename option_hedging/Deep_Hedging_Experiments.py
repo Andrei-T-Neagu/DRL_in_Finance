@@ -954,8 +954,7 @@ plot_actions(test_set_DH[:,0], bs_actions[:,0], model_actions[:,:,0], model_labe
 
 
 
-# tune_dqn()
-tune_ddpg()
+tune_dqn()
 
 
 
