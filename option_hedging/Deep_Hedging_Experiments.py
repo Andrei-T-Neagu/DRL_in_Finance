@@ -30,8 +30,8 @@ start_total_time = datetime.datetime.now()
 episodes = 200000
 trans_costs = 0.00              #proportional transaction costs 0.0 or 0.01
 twin_delayed=True
-double=True
-dueling=False
+double=False
+dueling=True
 T = 252/252
 
 cpu = True
