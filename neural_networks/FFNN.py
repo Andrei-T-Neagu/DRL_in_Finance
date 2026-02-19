@@ -37,8 +37,4 @@ class FFNN(nn.Module):
             return Q
         else:
             x = self.final_linear(x)
-            if self.policy:
-                x = torch.clamp(x, 0.0, 1.0)
-            if self.value:
-                x = torch.clamp(x, -50, 50)
             return x

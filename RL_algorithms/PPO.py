@@ -22,7 +22,7 @@ class PPO:
 
         self.device = device
         # Policy network
-        self.policy = FFNN(state_size, action_size * 2, self.num_layers, self.hidden_size, log_predicted=True).to(self.device) # Output mean and log_std
+        self.policy = FFNN(state_size, action_size * 2, self.num_layers, self.hidden_size).to(self.device) # Output mean and log_std
         # Value network
         self.value = FFNN(state_size, 1, self.num_layers, self.hidden_size).to(self.device)
 
