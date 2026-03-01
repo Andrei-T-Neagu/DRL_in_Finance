@@ -237,6 +237,17 @@ print("leland_rsmse_list: ", leland_rsmse_list)
 print("AVERAGE RSMSE LELAND DH: ", np.mean(leland_rsmse_list).item())
 print("RSMSE STD LELAND DH: ", np.std(leland_rsmse_list).item())
 
+# Compute B-S delta hedge RSMSE on the validation set to use as the early stopping threshold
+print(" ----------------- ")
+print(" Validation Set Delta Hedging Results (early stopping threshold)")
+print(" ----------------- ")
+val_set_BS = val_set.detach().cpu().numpy().T
+_, hedging_err_DH_val = Utils_general.delta_hedge_res(val_set_BS, r_borrow, r_lend, params_vect[1], T, option_type=option_type, position_type=position_type, strike=strike, V_0=V_0,
+                                                      nbs_shares=nbs_shares, trans_costs=trans_costs, Leland=True)
+semi_square_hedging_err_DH_val = np.square(np.where(hedging_err_DH_val > 0, hedging_err_DH_val, 0))
+rsmse_DH_leland = np.sqrt(np.mean(semi_square_hedging_err_DH_val))
+print("VAL SET RSMSE B-S DH (Leland): ", rsmse_DH_leland)
+
 # For reproducibility
 torch.manual_seed(0)
 random.seed(0)
